@@ -16,16 +16,36 @@
 
  ## Commandes (PowerShell)
 
- # Créer des environnements virtuels et installer dépendances
- python -m venv .venv_backend; .\.venv_backend\Scripts\Activate.ps1; pip install -r backend\requirements.txt
+### Environnements virtuels (avec `uv`)
 
- python -m venv .venv_frontend; .\.venv_frontend\Scripts\Activate.ps1; pip install -r frontend\requirements.txt
+Ce projet utilise le gestionnaire `uv` pour créer et gérer des environnements virtuels et les dépendances. Voici les commandes courantes et leur rôle :
+
+- `uv init` — initialise l'environnement / la configuration du projet.
+- `uv add <package>` — ajoute une dépendance au projet.
+- `uv sync` — installe / synchronise les dépendances déclarées.
+- `uv run <command>` — exécute une commande à l'intérieur de l'environnement créé.
+
+Pour l'exécution des parties :
+# Backend
+cd backend
+uv sync
+uv run uvicorn backend.app.main:app --reload
+
+# Frontend (nouveau terminal)
+cd frontend
+uv sync
+uv run streamlit run app.py
+
+Remarques :
+- `uv run` est la façon recommandée d'exécuter les serveurs (remplace l'appel direct à `uvicorn` / `streamlit` si vous souhaitez l'isoler dans l'environnement géré par `uv`).
+
+### Commandes alternatives (sans `uv`)
 
  # Lancer le backend
- .\.venv_backend\Scripts\Activate.ps1; uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+    uvicorn backend.app.main:app --reload
 
  # Lancer le frontend (nouveau terminal)
- .\.venv_frontend\Scripts\Activate.ps1; streamlit run frontend\app.py
+    streamlit run frontend\app.py
 
  ## Notes
  - Par défaut, le frontend tente d'appeler `http://localhost:8000/api/preprocess`. Si votre backend tourne ailleurs, définissez `api_url` dans `streamlit secrets` ou modifiez `API_URL` dans `frontend/app.py`.
