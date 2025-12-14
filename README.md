@@ -26,6 +26,7 @@ ImageFlow Pro is a comprehensive image processing application featuring a Stream
 - **Modern UI**: Beautiful, responsive interface with dark/light themes
 
 ## 🏗️ Project Structure
+```
 app-web-image/
 ├── backend/ # FastAPI Backend
 │ ├── app/
@@ -35,15 +36,14 @@ app-web-image/
 │ │ │ ├── init.py
 │ │ │ └── preprocess.py # All endpoints
 │ │ └── core/
-│ │    ├── init.py
-│ │    └── image_utils.py # Processing logic(fonctions )
-│ | └── requirements.txt
+│ │ ├── init.py
+│ │ └── image_utils.py # Processing logic (all fonctions)
+│ └── requirements.txt
 ├── frontend/ # Streamlit Frontend
 │ └── app.py # Main application
+├
 └── README.md # This file
-
-text
-
+ ```
 ##  Quick Installation
 
 ### Prerequisites
@@ -54,7 +54,7 @@ text
 
 ```bash
 # Clone the repository
-git clone https://github.com/
+git clone https://github.com/EyaHaddad/app-web-image.git
 cd app-web-image
 
 # Create virtual environment for backend
