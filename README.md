@@ -48,7 +48,8 @@ app-web-image/
 
 ### Prerequisites
 - Python 3.8 or higher
-- pip package manager
+- uv (fast Python package manager)
+	- Install on Windows: `pipx install uv` (recommended) or `pip install uv`
 
 ### 1. Clone & Setup
 
@@ -57,43 +58,35 @@ app-web-image/
 git clone https://github.com/EyaHaddad/app-web-image.git
 cd app-web-image
 
-# Create virtual environment for backend
-python -m venv .venv
+# Create the local virtual environment and install deps (managed by uv)
+uv sync
 
-# Activate virtual environment
-
-.venv\Scripts\activate
+# This will create .venv and install all dependencies from pyproject.toml
 
 
+2. Install Dependencies
 
-# Create virtual environment for backend
-python -m venv .venv_frontend
+All dependencies are managed via `uv` and declared in `pyproject.toml`.
 
-# Activate virtual environment
-
-.\.venv_frontend\Scripts\Activate # Create virtual environment for frontend
-
-
-2. Install Dependencies 
-bash
-# Install all dependencies  (ven of the backend)
-pip install -r backend/requirements.txt
-
-
-
-
-bash
-# Install all dependencies (.venv_frontend)
-pip install -r frontend/requirements.txt
+```bash
+# From the project root
+uv sync
+```
 
 
 3. Launch the Application
-bash
-# Terminal 1 - Start the backend API
-uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+
+```bash
+# Terminal 1 - Start the backend API using uv
+uv run uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 # API available at: http://localhost:8000
 # API Docs: http://localhost:8000/docs
 
-# Terminal 2 - Start the frontend
-streamlit run frontend/app.py
+# Terminal 2 - Start the frontend using uv
+uv run streamlit run frontend/app.py
 # App available at: http://localhost:8501
+```
+
+Notes:
+- `uv sync` creates and manages the `.venv` automatically.
+- Use `uv run <command>` to execute tools inside the managed environment.
