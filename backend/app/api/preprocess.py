@@ -1,15 +1,11 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import StreamingResponse, JSONResponse
 import io
 import time
 from typing import Optional
-from fastapi import APIRouter
-from ..core.image_utils import (preprocess_image,
-    get_histogram_data,
-    segment_channels,
-    detect_faces)
-
-
+from ..domain.interfaces import IImageProcessor
+from ..domain.models import ImageProcessingParams
+from .dependencies import get_image_processor
 
 router = APIRouter()
 
@@ -32,13 +28,11 @@ async def preprocess_image_endpoint(
     contrast: str = Form("", description="Contrast adjustment"),
     saturation: str = Form("", description="Saturation adjustment"),
     sharpness: str = Form("", description="Sharpness adjustment"),
-    gamma: str = Form("", description="Gamma correction")
+    gamma: str = Form("", description="Gamma correction"),
+    processor: IImageProcessor = Depends(get_image_processor)
 ):
     """
     Process an image with various transformations.
-    
-    This endpoint accepts an image file and applies selected preprocessing operations.
-    Returns the processed image as a PNG file.
     """
     try:
         # Read file
@@ -52,65 +46,53 @@ async def preprocess_image_endpoint(
         if not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="File must be an image")
         
-        # Prepare parameters
-        params = {}
+        # Build params object
+        params = ImageProcessingParams()
         
         # Boolean parameters
-        bool_params = ['grayscale', 'equalize', 'normalize']
-        for param in bool_params:
-            if locals()[param].lower() == 'true':
-                params[param] = True
+        if grayscale.lower() == 'true': params.grayscale = True
+        if equalize.lower() == 'true': params.equalize = True
+        if normalize.lower() == 'true': params.normalize = True
         
         # Resize
-        if resize_width != "0" or resize_height != "0":
-            params['resize'] = (
-                int(resize_width) if resize_width != "0" else None,
-                int(resize_height) if resize_height != "0" else None
-            )
+        if resize_width != "0": params.resize_width = int(resize_width)
+        if resize_height != "0": params.resize_height = int(resize_height)
         
         # Threshold
         if threshold and threshold != "":
-            params['threshold'] = int(threshold)
-            params['threshold_type'] = threshold_type
+            params.threshold = int(threshold)
+            params.threshold_type = threshold_type
         
         # Blur
         if blur_type and blur_type != "":
-            params['blur_type'] = blur_type
-            params['blur_kernel'] = int(blur_kernel)
+            params.blur_type = blur_type
+            params.blur_kernel = int(blur_kernel)
         
         # Edge detection
         if edge_detection and edge_detection != "":
-            params['edge_detection'] = edge_detection
+            params.edge_detection = edge_detection
         
         # Transformations
         if rotate_angle and rotate_angle != "":
-            params['rotate_angle'] = float(rotate_angle)
+            params.rotate_angle = float(rotate_angle)
         
         if flip and flip != "":
-            params['flip'] = flip
+            params.flip = flip
         
         # Adjustments
-        float_params = ['brightness', 'contrast', 'saturation', 'sharpness', 'gamma']
-        for param in float_params:
-            value = locals()[param]
-            if value and value != "":
-                try:
-                    params[param] = float(value)
-                except ValueError:
-                    pass
+        if brightness and brightness != "": params.brightness = float(brightness)
+        if contrast and contrast != "": params.contrast = float(contrast)
+        if saturation and saturation != "": params.saturation = float(saturation)
+        if sharpness and sharpness != "": params.sharpness = float(sharpness)
+        if gamma and gamma != "": params.gamma = float(gamma)
         
         # Process image
         start_time = time.time()
-        result_image = preprocess_image(contents, **params)
+        result_bytes = processor.process_image(contents, params)
         processing_time = time.time() - start_time
         
-        # Convert to bytes
-        buf = io.BytesIO()
-        result_image.save(buf, format="PNG", optimize=True)
-        buf.seek(0)
-        
         return StreamingResponse(
-            buf,
+            io.BytesIO(result_bytes),
             media_type="image/png",
             headers={
                 "X-Processing-Time": f"{processing_time:.3f}s",
@@ -129,49 +111,48 @@ async def preprocess_image_endpoint(
 @router.post("/histogram")
 async def histogram_endpoint(
     file: UploadFile = File(..., description="Image file"),
-    channel: str = Form("all", description="Channel to analyze (all, red, green, blue, gray)")
+    channel: str = Form("all", description="Channel to analyze (all, red, green, blue, gray)"),
+    processor: IImageProcessor = Depends(get_image_processor)
 ):
     """
     Calculate and return histogram data for an image.
     """
     try:
         contents = await file.read()
-        histogram_data = get_histogram_data(contents, channel)
-        return JSONResponse(histogram_data)
+        histogram_data = processor.get_histogram(contents, channel)
+        return histogram_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Histogram error: {str(e)}")
 
 @router.post("/segment")
 async def segment_endpoint(
-    file: UploadFile = File(..., description="Image file")
+    file: UploadFile = File(..., description="Image file"),
+    processor: IImageProcessor = Depends(get_image_processor)
 ):
     """
     Separate RGB channels of an image.
     """
     try:
         contents = await file.read()
-        channels = segment_channels(contents)
-        return JSONResponse(channels)
+        channels = processor.segment_image(contents)
+        return channels
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Segmentation error: {str(e)}")
 
 @router.post("/detect_faces")
 async def detect_faces_endpoint(
-    file: UploadFile = File(..., description="Image file")
+    file: UploadFile = File(..., description="Image file"),
+    processor: IImageProcessor = Depends(get_image_processor)
 ):
     """
     Detect faces in an image and return image with bounding boxes.
     """
     try:
         contents = await file.read()
-        result_image = detect_faces(contents)
-        
-        buf = io.BytesIO()
-        result_image.save(buf, format="PNG")
-        buf.seek(0)
+        result_bytes = processor.detect_faces(contents)
         
         return StreamingResponse(
-            buf,
+            io.BytesIO(result_bytes),
             media_type="image/png",
             headers={
                 "Content-Disposition": "attachment; filename=faces_detected.png"
