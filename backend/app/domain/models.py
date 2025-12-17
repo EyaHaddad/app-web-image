@@ -7,6 +7,7 @@ class ImageProcessingParams(BaseModel):
     resize_width: Optional[int] = None
     resize_height: Optional[int] = None
     equalize: bool = False
+    stretch: bool = False
     normalize: bool = False
     threshold: Optional[int] = None
     threshold_type: str = "binary"

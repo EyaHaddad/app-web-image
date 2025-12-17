@@ -16,6 +16,11 @@ class IImageProcessor(ABC):
         pass
 
     @abstractmethod
+    def generate_histogram_image(self, image_bytes: bytes, channel: str) -> bytes:
+        """Generate a histogram visualization as a PNG image"""
+        pass
+
+    @abstractmethod
     def segment_image(self, image_bytes: bytes) -> SegmentationResult:
         """Segment image into channels"""
         pass

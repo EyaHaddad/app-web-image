@@ -26,17 +26,33 @@ def get_api_url(endpoint: str) -> str:
     endpoint_path = API_ENDPOINTS.get(endpoint, endpoint)
     return f"{base_url}{endpoint_path}"
 
-def apply_operation(operation_type: str, params: dict, current_image: Image.Image, on_success=None):
-    """Applique une opération via l'API"""
+def apply_operation(current_image: Image.Image, endpoint: str, params: dict, on_success=None):
+    """Applique une opération via l'API
+    
+    Args:
+        current_image: L'image PIL actuelle
+        endpoint: L'endpoint API (ex: "/preprocess", "/histogram")
+        params: Les paramètres à passer
+        on_success: Callback optionnel après succès
+    
+    Returns:
+        Image.Image si c'est une image, bytes si c'est binaire (ex: PNG), ou None si erreur
+    """
     try:
         if current_image:
             files = {
                 'file': ('image.png', image_to_bytes(current_image), 'image/png')
             }
             
-            with st.spinner(f"⏳ Application de {operation_type}..."):
+            # Déterminer l'URL endpoint
+            if endpoint.startswith('/'):
+                url = f"{API_URL.rstrip('/')}{endpoint}"
+            else:
+                url = get_api_url(endpoint)
+            
+            with st.spinner("⏳ Traitement..."):
                 response = requests.post(
-                    get_api_url("preprocess"),  
+                    url,
                     files=files,
                     data=params,
                     timeout=30
@@ -45,18 +61,23 @@ def apply_operation(operation_type: str, params: dict, current_image: Image.Imag
                 content_type = response.headers.get('Content-Type', '')
 
                 if response.status_code == 200:
-                    # N'ouvrir avec PIL que si c'est une image
+                    # Gérer les réponses image
                     if content_type.startswith('image/'):
                         try:
-                            result = Image.open(io.BytesIO(response.content))
+                            # Vérifier si on demande un téléchargement (ex: histogram PNG)
+                            if params.get('download') == 'true' or endpoint == '/histogram':
+                                # Retourner les bytes bruts pour le download
+                                return response.content
+                            else:
+                                # Retourner l'image PIL
+                                result = Image.open(io.BytesIO(response.content))
+                                st.toast(f"✅ Opération réussie!", icon="✅")
+                                if on_success:
+                                    on_success(result, endpoint, params)
+                                return result
                         except Exception:
                             st.error("❌ La réponse du backend n'est pas une image valide.")
                             return None
-
-                        st.toast(f"✅ {operation_type} appliqué avec succès!", icon="✅")
-                        if on_success:
-                            on_success(result, operation_type, params)
-                        return result
                     else:
                         # 200 mais corps non-image (ex: JSON de debug)
                         try:

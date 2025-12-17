@@ -114,6 +114,17 @@ class ImageProcessor(IImageProcessor):
                     yuv[:, :, 0] = cv2.equalizeHist(yuv[:, :, 0])
                     cv_img = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR)
             
+            # Apply histogram stretching
+            if params.stretch:
+                if len(cv_img.shape) == 2:  # Grayscale
+                    p2, p98 = np.percentile(cv_img, (2, 98))
+                    cv_img = np.clip((cv_img - p2) / (p98 - p2) * 255, 0, 255).astype(np.uint8)
+                else:  # Color - stretch each channel
+                    for i in range(3):
+                        p2, p98 = np.percentile(cv_img[:,:,i], (2, 98))
+                        if p98 > p2:
+                            cv_img[:,:,i] = np.clip((cv_img[:,:,i] - p2) / (p98 - p2) * 255, 0, 255).astype(np.uint8)
+            
             # Apply thresholding
             if params.threshold is not None:
                 # Convert to grayscale if needed
@@ -225,6 +236,128 @@ class ImageProcessor(IImageProcessor):
         
         except Exception as e:
             raise RuntimeError(f"Histogram calculation failed: {str(e)}")
+    
+    def generate_histogram_image(self, image_bytes: bytes, channel: str) -> bytes:
+        """Generate a histogram visualization as a PNG image with professional styling"""
+        try:
+            img = Image.open(io.BytesIO(image_bytes))
+            cv_img = self._pil_to_cv2(img)
+            
+            # Create a larger figure for better visualization (800x600)
+            fig_height, fig_width = 600, 900
+            fig = np.ones((fig_height, fig_width, 3), dtype=np.uint8) * 255
+            
+            # Define plot area
+            plot_left = 80
+            plot_right = 850
+            plot_top = 50
+            plot_bottom = 500
+            plot_width = plot_right - plot_left
+            plot_height = plot_bottom - plot_top
+            
+            # Draw plot background with light grid
+            cv2.rectangle(fig, (plot_left, plot_top), (plot_right, plot_bottom), (240, 240, 240), -1)
+            
+            # Draw grid lines
+            for i in range(0, 256, 16):
+                x = plot_left + int((i / 256) * plot_width)
+                cv2.line(fig, (x, plot_top), (x, plot_bottom), (200, 200, 200), 1)
+            
+            for i in range(0, plot_height, 50):
+                cv2.line(fig, (plot_left, plot_top + i), (plot_right, plot_top + i), (200, 200, 200), 1)
+            
+            # Draw axes
+            cv2.line(fig, (plot_left, plot_bottom), (plot_right, plot_bottom), (0, 0, 0), 2)  # X axis
+            cv2.line(fig, (plot_left, plot_top), (plot_left, plot_bottom), (0, 0, 0), 2)  # Y axis
+            
+            # Process and draw histogram based on channel
+            if channel == "gray" or len(cv_img.shape) == 2:
+                if len(cv_img.shape) == 3:
+                    cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+                hist = cv2.calcHist([cv_img], [0], None, [256], [0, 256])
+                hist = cv2.normalize(hist, hist).flatten() * plot_height
+                
+                # Draw histogram bars with filled area
+                for i in range(256):
+                    x = plot_left + int((i / 256) * plot_width)
+                    y = plot_bottom - int(hist[i])
+                    cv2.line(fig, (x, plot_bottom), (x, y), (80, 80, 80), 2)
+            
+            elif channel == "all":
+                colors_bgr = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]  # BGR format
+                
+                for channel_idx, color_bgr in enumerate(colors_bgr):
+                    hist = cv2.calcHist([cv_img], [channel_idx], None, [256], [0, 256])
+                    hist = cv2.normalize(hist, hist).flatten() * plot_height
+                    
+                    for i in range(256):
+                        x = plot_left + int((i / 256) * plot_width)
+                        y = plot_bottom - int(hist[i])
+                        cv2.line(fig, (x, plot_bottom), (x, y), color_bgr, 1)
+            
+            else:
+                color_map = {"blue": 0, "green": 1, "red": 2}
+                color_bgr_map = {"blue": (255, 0, 0), "green": (0, 255, 0), "red": (0, 0, 255)}
+                
+                if channel in color_map:
+                    hist = cv2.calcHist([cv_img], [color_map[channel]], None, [256], [0, 256])
+                    hist = cv2.normalize(hist, hist).flatten() * plot_height
+                    color_bgr = color_bgr_map[channel]
+                    
+                    for i in range(256):
+                        x = plot_left + int((i / 256) * plot_width)
+                        y = plot_bottom - int(hist[i])
+                        cv2.line(fig, (x, plot_bottom), (x, y), color_bgr, 2)
+            
+            # Add axis labels
+            cv2.putText(fig, "0", (plot_left - 15, plot_bottom + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+            cv2.putText(fig, "256", (plot_right - 25, plot_bottom + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+            cv2.putText(fig, "Pixel Values", (plot_left + plot_width // 2 - 60, fig_height - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            cv2.putText(fig, "Frequency", (10, plot_top + plot_height // 2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            
+            # Add title
+            title = f"Histogram - {channel.upper()}"
+            cv2.putText(fig, title, (plot_left + 10, plot_top - 15), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 0), 2)
+            
+            # Add statistics box
+            stats_x, stats_y = plot_right + 20, plot_top + 50
+            
+            # Calculate statistics for the displayed channel
+            if channel == "gray" or len(cv_img.shape) == 2:
+                if len(cv_img.shape) == 3:
+                    cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+                mean_val = np.mean(cv_img)
+                std_val = np.std(cv_img)
+                min_val = np.min(cv_img)
+                max_val = np.max(cv_img)
+            else:
+                color_map = {"blue": 0, "green": 1, "red": 2}
+                if channel in color_map:
+                    channel_data = cv_img[:, :, color_map[channel]]
+                    mean_val = np.mean(channel_data)
+                    std_val = np.std(channel_data)
+                    min_val = np.min(channel_data)
+                    max_val = np.max(channel_data)
+                else:
+                    mean_val = std_val = min_val = max_val = 0
+            
+            # Draw stats box background
+            cv2.rectangle(fig, (stats_x - 5, stats_y - 5), (stats_x + 40, stats_y + 100), (245, 245, 245), -1)
+            cv2.rectangle(fig, (stats_x - 5, stats_y - 5), (stats_x + 40, stats_y + 100), (100, 100, 100), 1)
+            
+            # Draw stats text
+            cv2.putText(fig, "Stats:", (stats_x, stats_y + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            cv2.putText(fig, f"Mean: {mean_val:.1f}", (stats_x, stats_y + 35), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+            cv2.putText(fig, f"Std: {std_val:.1f}", (stats_x, stats_y + 50), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+            cv2.putText(fig, f"Min: {int(min_val)}", (stats_x, stats_y + 65), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+            cv2.putText(fig, f"Max: {int(max_val)}", (stats_x, stats_y + 80), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+            
+            # Convert to PNG bytes
+            _, buffer = cv2.imencode('.png', fig)
+            return buffer.tobytes()
+        
+        except Exception as e:
+            raise RuntimeError(f"Histogram image generation failed: {str(e)}")
 
     def segment_image(self, image_bytes: bytes) -> SegmentationResult:
         try:

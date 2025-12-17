@@ -16,6 +16,7 @@ async def preprocess_image_endpoint(
     resize_width: str = Form("0", description="Resize width (0 to keep original)"),
     resize_height: str = Form("0", description="Resize height (0 to keep original)"),
     equalize: str = Form("false", description="Histogram equalization"),
+    stretch: str = Form("false", description="Histogram stretching (contrast stretching)"),
     normalize: str = Form("false", description="Normalize pixel values"),
     threshold: str = Form("", description="Threshold value (0-255)"),
     threshold_type: str = Form("binary", description="Threshold type"),
@@ -52,6 +53,7 @@ async def preprocess_image_endpoint(
         # Boolean parameters
         if grayscale.lower() == 'true': params.grayscale = True
         if equalize.lower() == 'true': params.equalize = True
+        if stretch.lower() == 'true': params.stretch = True
         if normalize.lower() == 'true': params.normalize = True
         
         # Resize
@@ -112,15 +114,33 @@ async def preprocess_image_endpoint(
 async def histogram_endpoint(
     file: UploadFile = File(..., description="Image file"),
     channel: str = Form("all", description="Channel to analyze (all, red, green, blue, gray)"),
+    download: str = Form("false", description="Download histogram as image (true/false)"),
     processor: IImageProcessor = Depends(get_image_processor)
 ):
     """
     Calculate and return histogram data for an image.
+    
+    Parameters:
+    - channel: Channel to analyze (all, red, green, blue, gray)
+    - download: Set to 'true' to download as PNG image instead of JSON data
     """
     try:
         contents = await file.read()
-        histogram_data = processor.get_histogram(contents, channel)
-        return histogram_data
+        
+        if download.lower() == 'true':
+            # Return histogram as image
+            result_bytes = processor.generate_histogram_image(contents, channel)
+            return StreamingResponse(
+                io.BytesIO(result_bytes),
+                media_type="image/png",
+                headers={
+                    "Content-Disposition": f"attachment; filename=histogram_{channel}.png"
+                }
+            )
+        else:
+            # Return histogram data as JSON
+            histogram_data = processor.get_histogram(contents, channel)
+            return histogram_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Histogram error: {str(e)}")
 

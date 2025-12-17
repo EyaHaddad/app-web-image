@@ -349,19 +349,72 @@ def render_image_view():
         with tab5:
             st.markdown("### 📊 Analyse approfondie")
             
-            """col_anal1, col_anal2 = st.columns(2)
-            with col_anal1:"""
-            st.markdown("#### 📈 Histogramme interactif")
+            # Section Histogramme
+            st.markdown("#### 📈 Analyse d'histogramme")
             
-            hist_mode = st.radio(
-                "Mode d'affichage",
-                ["RGB complet", "Par canal"],
-                horizontal=True
-            )
+            col_hist1, col_hist2 = st.columns(2)
+            
+            with col_hist1:
+                hist_mode = st.radio(
+                    "Mode d'affichage",
+                    ["RGB complet", "Par canal"],
+                    horizontal=True
+                )
+            
+            with col_hist2:
+                hist_channel = st.selectbox(
+                    "Sélectionner le canal",
+                    ["all", "red", "green", "blue", "gray"],
+                    format_func=lambda x: {"all": "RGB complet", "red": "🔴 Rouge", "green": "🟢 Vert", "blue": "🔵 Bleu", "gray": "⚫ Gris"}[x]
+                )
             
             if hist_mode == "RGB complet":
                 fig = display_histogram(st.session_state.current_image, "interactive")
                 st.plotly_chart(fig, use_container_width=True)
+                
+                # Boutons de contrôle
+                col_btn1, col_btn2 = st.columns(2)
+                
+                with col_btn1:
+                    if st.button("📥 Télécharger histogramme (PNG)", key="download_hist_all"):
+                        try:
+                            hist_image = apply_operation(
+                                st.session_state.current_image,
+                                "/histogram",
+                                {"channel": "all", "download": "true"}
+                            )
+                            st.download_button(
+                                label="💾 Télécharger",
+                                data=hist_image,
+                                file_name="histogram_all.png",
+                                mime="image/png"
+                            )
+                            st.success("✅ Histogramme généré avec succès!")
+                        except Exception as e:
+                            st.error(f"❌ Erreur: {str(e)}")
+                
+                with col_btn2:
+                    if st.button("🔄 Appliquer étirement histogramme", key="stretch_all"):
+                        try:
+                            stretched = apply_operation(
+                                st.session_state.current_image,
+                                "/preprocess",
+                                {
+                                    "stretch": "true",
+                                    "grayscale": "false",
+                                    "resize_width": "0",
+                                    "resize_height": "0",
+                                    "equalize": "false",
+                                    "normalize": "false"
+                                }
+                            )
+                            st.session_state.current_image = stretched
+                            add_to_history(stretched, "Stretch Histogram")
+                            st.success("✅ Étirement d'histogramme appliqué!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Erreur: {str(e)}")
+            
             elif hist_mode == "Par canal":
                 # Afficher les histogrammes par canal séparément
                 tabs_r, g, b = st.tabs(["🔴 Rouge", "🟢 Vert", "🔵 Bleu"])
@@ -371,25 +424,150 @@ def render_image_view():
                 with tabs_r:
                     fig_r = go.Figure()
                     hist_r = np.histogram(img_array[:,:,0].flatten(), bins=256, range=[0, 256])[0]
-                    fig_r.add_trace(go.Bar(x=list(range(256)), y=hist_r, marker_color='red'))
-                    fig_r.update_layout(title="Canal Rouge", height=300)
+                    fig_r.add_trace(go.Bar(x=list(range(256)), y=hist_r, marker_color='red', name='Rouge'))
+                    fig_r.update_layout(
+                        title="Canal Rouge",
+                        height=400,
+                        xaxis_title="Valeur de pixel",
+                        yaxis_title="Fréquence",
+                        hovermode='x unified'
+                    )
                     st.plotly_chart(fig_r, use_container_width=True)
+                    
+                    col_r1, col_r2 = st.columns(2)
+                    with col_r1:
+                        if st.button("📥 Télécharger (Rouge)", key="download_hist_red"):
+                            try:
+                                hist_image = apply_operation(
+                                    st.session_state.current_image,
+                                    "/histogram",
+                                    {"channel": "red", "download": "true"}
+                                )
+                                st.download_button(
+                                    label="💾 Télécharger PNG",
+                                    data=hist_image,
+                                    file_name="histogram_red.png",
+                                    mime="image/png",
+                                    key="download_btn_red"
+                                )
+                            except Exception as e:
+                                st.error(f"❌ Erreur: {str(e)}")
                 
                 with g:
                     fig_g = go.Figure()
                     hist_g = np.histogram(img_array[:,:,1].flatten(), bins=256, range=[0, 256])[0]
-                    fig_g.add_trace(go.Bar(x=list(range(256)), y=hist_g, marker_color='green'))
-                    fig_g.update_layout(title="Canal Vert", height=300)
+                    fig_g.add_trace(go.Bar(x=list(range(256)), y=hist_g, marker_color='green', name='Vert'))
+                    fig_g.update_layout(
+                        title="Canal Vert",
+                        height=400,
+                        xaxis_title="Valeur de pixel",
+                        yaxis_title="Fréquence",
+                        hovermode='x unified'
+                    )
                     st.plotly_chart(fig_g, use_container_width=True)
+                    
+                    col_g1, col_g2 = st.columns(2)
+                    with col_g1:
+                        if st.button("📥 Télécharger (Vert)", key="download_hist_green"):
+                            try:
+                                hist_image = apply_operation(
+                                    st.session_state.current_image,
+                                    "/histogram",
+                                    {"channel": "green", "download": "true"}
+                                )
+                                st.download_button(
+                                    label="💾 Télécharger PNG",
+                                    data=hist_image,
+                                    file_name="histogram_green.png",
+                                    mime="image/png",
+                                    key="download_btn_green"
+                                )
+                            except Exception as e:
+                                st.error(f"❌ Erreur: {str(e)}")
                 
                 with b:
                     fig_b = go.Figure()
                     hist_b = np.histogram(img_array[:,:,2].flatten(), bins=256, range=[0, 256])[0]
-                    fig_b.add_trace(go.Bar(x=list(range(256)), y=hist_b, marker_color='blue'))
-                    fig_b.update_layout(title="Canal Bleu", height=300)
+                    fig_b.add_trace(go.Bar(x=list(range(256)), y=hist_b, marker_color='blue', name='Bleu'))
+                    fig_b.update_layout(
+                        title="Canal Bleu",
+                        height=400,
+                        xaxis_title="Valeur de pixel",
+                        yaxis_title="Fréquence",
+                        hovermode='x unified'
+                    )
                     st.plotly_chart(fig_b, use_container_width=True)
+                    
+                    col_b1, col_b2 = st.columns(2)
+                    with col_b1:
+                        if st.button("📥 Télécharger (Bleu)", key="download_hist_blue"):
+                            try:
+                                hist_image = apply_operation(
+                                    st.session_state.current_image,
+                                    "/histogram",
+                                    {"channel": "blue", "download": "true"}
+                                )
+                                st.download_button(
+                                    label="💾 Télécharger PNG",
+                                    data=hist_image,
+                                    file_name="histogram_blue.png",
+                                    mime="image/png",
+                                    key="download_btn_blue"
+                                )
+                            except Exception as e:
+                                st.error(f"❌ Erreur: {str(e)}")
         
-        
+            st.markdown("---")
+            st.markdown("#### 🔧 Opérations d'histogramme")
+            
+            col_ops1, col_ops2 = st.columns(2)
+            
+            with col_ops1:
+                if st.button("🔄 Étirement d'histogramme", key="stretch_op"):
+                    with st.spinner("Application de l'étirement..."):
+                        try:
+                            stretched = apply_operation(
+                                st.session_state.current_image,
+                                "/preprocess",
+                                {
+                                    "stretch": "true",
+                                    "grayscale": "false",
+                                    "resize_width": "0",
+                                    "resize_height": "0",
+                                    "equalize": "false",
+                                    "normalize": "false"
+                                }
+                            )
+                            st.session_state.current_image = stretched
+                            add_to_history(stretched, "Histogram Stretch")
+                            st.success("✅ Étirement appliqué!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Erreur: {str(e)}")
+            
+            with col_ops2:
+                if st.button("🎯 Égalisation d'histogramme", key="equalize_op"):
+                    with st.spinner("Application de l'égalisation..."):
+                        try:
+                            equalized = apply_operation(
+                                st.session_state.current_image,
+                                "/preprocess",
+                                {
+                                    "equalize": "true",
+                                    "grayscale": "false",
+                                    "resize_width": "0",
+                                    "resize_height": "0",
+                                    "stretch": "false",
+                                    "normalize": "false"
+                                }
+                            )
+                            st.session_state.current_image = equalized
+                            add_to_history(equalized, "Histogram Equalization")
+                            st.success("✅ Égalisation appliquée!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Erreur: {str(e)}")
+            
             st.markdown("---")
             st.markdown("#### 📊 Statistiques")
             
