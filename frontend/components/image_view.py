@@ -261,90 +261,90 @@ def render_image_view():
         with tab4:
             st.markdown("###  Transformations géométriques et visuelles")
             
-            col_trans1, col_trans2 = st.columns(2)
+            #col_trans1, col_trans2 = st.columns(2)
+            #with col_trans1:
+            st.markdown("#### 🔄 Rotation et symétrie")
             
-            with col_trans1:
-                st.markdown("#### 🔄 Rotation et symétrie")
-                
-                rotate_angle = st.slider("Angle de rotation", -180, 180, 0,
-                                        help="Rotation en degrés (-180 à 180)")
-                
-                flip_type = st.selectbox(
-                    "Retournement",
-                    ["none", "horizontal", "vertical", "both"],
-                    format_func=lambda x: {
-                        "none": "Aucun",
-                        "horizontal": "Horizontal",
-                        "vertical": "Vertical",
-                        "both": "Les deux"
-                    }[x]
-                )
-                
-                if st.button("Appliquer transformations géométriques",
-                            type="primary",
-                            use_container_width=True):
-                    params = {}
-                    if rotate_angle != 0:
-                        params['rotate_angle'] = str(rotate_angle)
-                    if flip_type != "none":
-                        params['flip'] = flip_type
-                    
-                    if params:
-                        apply_operation("Transformations géométriques", params, st.session_state.current_image, on_success_callback)
+            rotate_angle = st.slider("Angle de rotation", -180, 180, 0,
+                                    help="Rotation en degrés (-180 à 180)")
             
-            with col_trans2:
-                st.markdown("#### ☀️ Ajustements visuels")
-                
-                brightness = st.slider("Luminosité", -100, 100, 0,
-                                      help="Ajuste la luminosité globale")
-                
-                contrast = st.slider("Contraste", 0.1, 3.0, 1.0, 0.1,
-                                    help="Augmente ou diminue le contraste")
-                
-                saturation = st.slider("Saturation", 0.0, 3.0, 1.0, 0.1,
-                                      help="Intensité des couleurs")
-                
-                if st.button("Appliquer ajustements visuels",
-                            type="primary",
-                            use_container_width=True):
-                    params = {}
-                    if brightness != 0:
-                        params['brightness'] = str(brightness)
-                    if contrast != 1.0:
-                        params['contrast'] = str(contrast)
-                    
-                    if params:
-                        apply_operation("Ajustements visuels", params, st.session_state.current_image, on_success_callback)
+            flip_type = st.selectbox(
+                "Retournement",
+                ["none", "horizontal", "vertical", "both"],
+                format_func=lambda x: {
+                    "none": "Aucun",
+                    "horizontal": "Horizontal",
+                    "vertical": "Vertical",
+                    "both": "Les deux"
+                }[x]
+            )
             
+            if st.button("Appliquer transformations géométriques",
+                        type="primary",
+                        use_container_width=True):
+                params = {}
+                if rotate_angle != 0:
+                    params['rotate_angle'] = str(rotate_angle)
+                if flip_type != "none":
+                    params['flip'] = flip_type
+                
+                if params:
+                    apply_operation("Transformations géométriques", params, st.session_state.current_image, on_success_callback)
+            
+            #with col_trans2:
+            st.markdown("---")
+            st.markdown("#### ☀️ Ajustements visuels")
+            
+            brightness = st.slider("Luminosité", -100, 100, 0,
+                                    help="Ajuste la luminosité globale")
+            
+            contrast = st.slider("Contraste", 0.1, 3.0, 1.0, 0.1,
+                                help="Augmente ou diminue le contraste")
+            
+            saturation = st.slider("Saturation", 0.0, 3.0, 1.0, 0.1,
+                                    help="Intensité des couleurs")
+            
+            if st.button("Appliquer ajustements visuels",
+                        type="primary",
+                        use_container_width=True):
+                params = {}
+                if brightness != 0:
+                    params['brightness'] = str(brightness)
+                if contrast != 1.0:
+                    params['contrast'] = str(contrast)
+                
+                if params:
+                    apply_operation("Ajustements visuels", params, st.session_state.current_image, on_success_callback)
+            
+            st.markdown("---")
             # Détection de contours
             st.markdown("#### 🔍 Détection de contours")
             
-            col_edge1, col_edge2 = st.columns(2)
+            #col_edge1, col_edge2 = st.columns(2)
+            #with col_edge1:
+            edge_method = st.selectbox(
+                "Méthode",
+                ["canny", "sobel", "sobel_x", "sobel_y", "laplacian"],
+                format_func=lambda x: {
+                    "canny": "Canny (recommandé)",
+                    "sobel": "Sobel (gradients)",
+                    "sobel_x": "Sobel X (horizontal)",
+                    "sobel_y": "Sobel Y (vertical)",
+                    "laplacian": "Laplacian (2D)"
+                }[x]
+            )
             
-            with col_edge1:
-                edge_method = st.selectbox(
-                    "Méthode",
-                    ["canny", "sobel", "sobel_x", "sobel_y", "laplacian"],
-                    format_func=lambda x: {
-                        "canny": "Canny (recommandé)",
-                        "sobel": "Sobel (gradients)",
-                        "sobel_x": "Sobel X (horizontal)",
-                        "sobel_y": "Sobel Y (vertical)",
-                        "laplacian": "Laplacian (2D)"
-                    }[x]
-                )
-                
-                if edge_method == "canny":
-                    canny_low = st.slider("Seuil bas", 0, 255, 50)
-                    canny_high = st.slider("Seuil haut", 0, 255, 150)
-            
-            with col_edge2:
-                if st.button("Détecter les contours",
-                            type="primary",
-                            use_container_width=True):
-                    params = {'edge_detection': edge_method}
-                    apply_operation(f"Détection {edge_method}", params, st.session_state.current_image, on_success_callback)
+            if edge_method == "canny":
+                canny_low = st.slider("Seuil bas", 0, 255, 50)
+                canny_high = st.slider("Seuil haut", 0, 255, 150)
         
+            #with col_edge2:
+            if st.button("Détecter les contours",
+                        type="primary",
+                        use_container_width=True):
+                params = {'edge_detection': edge_method}
+                apply_operation(f"Détection {edge_method}", params, st.session_state.current_image, on_success_callback)
+    
         # ==================== TAB 5: ANALYSE ====================
         with tab5:
             st.markdown("### 📊 Analyse approfondie")

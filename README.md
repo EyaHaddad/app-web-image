@@ -21,12 +21,23 @@ ImageFlow Pro is a comprehensive image processing application featuring a Stream
 ### ✨ Key Highlights
 - **Real-time Processing**: Instant preview of all operations
 - **Modular Architecture**: Clean separation of concerns with domain-driven design
-- **Comprehensive Image Processing**: Full suite of filters and transformations including cropping
+- **Comprehensive Image Processing**: Full suite of filters and transformations including interactive cropping
 - **Advanced Analytics**: Interactive histograms and statistical analysis
 - **Modern UI**: Beautiful, responsive Streamlit interface
 - **RESTful API**: Well-documented FastAPI endpoints with automatic OpenAPI documentation
 - **Session Management**: Persistent state and processing history tracking
-- **Image Cropping**: Interactive cropping tool with preset aspect ratios
+- **Interactive Cropping**: Mouse-based or slider-based image cropping with aspect ratio presets
+
+## ✨ Recent Updates (v1.1)
+
+### Interactive Cropping Enhancement 🖱️
+- **New `streamlit-cropper` Integration**: Interactive mouse-based image cropping
+- **Dual Selection Modes**:
+  - 🖱️ **Interactive Mode**: Drag, resize, and preview with your mouse in real-time
+  - 🎚️ **Slider Mode**: Precise pixel-level control using coordinate sliders
+- **Enhanced Presets**: 6 aspect ratio presets including 3:2 for photography
+- **Automatic Crop Application**: Direct image cropping without API delay in interactive mode
+- **Better User Experience**: Seamless switching between modes based on preference
 
 ## 🏗️ Project Structure
 ```
@@ -90,10 +101,11 @@ App_Web_Image/
 │   │   │   ├─ Transformations tab
 │   │   │   └─ Analytics tab
 │   │   ├── ✂️ crop.py                # Cropping component
+│   │   │   ├─ Interactive mode (mouse selection)
+│   │   │   ├─ Slider mode (coordinate precision)
+│   │   │   ├─ Preset ratios (1:1, 16:9, 9:16, 4:3, 3:2)
 │   │   │   ├─ render_crop_preview()
-│   │   │   ├─ Sliders (X, Y, Width, Height)
-│   │   │   ├─ Preset buttons (1:1, 16:9, 9:16, 4:3)
-│   │   │   └─ Apply/Reset actions
+│   │   │   └─ apply_crop_direct() / apply_crop()
 │   │   ├── 🎨 sidebar.py             # Sidebar controls
 │   │   ├── 📚 gallery.py             # Image gallery display
 │   │   └── ⏱️ history.py             # Processing history & undo/redo
@@ -177,10 +189,13 @@ User Interface → Components → Services → Backend API
 
 ### Image Processing Capabilities
 - **Image Cropping** ✂️
-  - Interactive cropping with coordinate sliders
-  - Preset aspect ratios (1:1, 16:9, 9:16, 4:3)
+  - **Two selection modes**:
+    - 🖱️ **Interactive Mode**: Select and resize crop area directly with mouse
+    - 🎚️ **Slider Mode**: Precise control with coordinate sliders
+  - **Preset aspect ratios**: 1:1, 16:9, 9:16, 4:3, 3:2
   - Real-time preview with selection overlay
-  - Adjustable crop area and dimensions
+  - Flexible crop area and dimensions
+  - Instant preview of cropped result
 
 - **Color Space Conversions**: RGB, Grayscale, HSV, and more
 - **Filtering Operations**: Blur, Sharpen, Edge Detection, Morphological operations
@@ -195,7 +210,7 @@ User Interface → Components → Services → Backend API
 - **Real-time Preview**: Instant processing results with side-by-side comparison
 - **Multiple Processing Tabs**:
   - 📊 Image Information (metadata, histograms)
-  - ✂️ Cropping (interactive cropping tool)
+  - ✂️ Cropping (interactive mouse-based or slider cropping)
   - 🎨 Filters (color, blur, edge detection)
   - 🔄 Transformations (rotation, scaling, flipping)
   - 📈 Analytics (statistical analysis and charts)
@@ -211,6 +226,7 @@ User Interface → Components → Services → Backend API
 - **uv** (fast Python package manager - recommended)
   - Install on Windows: `pipx install uv` (or `pip install uv`)
   - Install on macOS/Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- **Operating System**: Windows, macOS, or Linux
 
 ### 1. Clone & Setup
 
@@ -306,13 +322,25 @@ Network URL: http://xxx.xxx.x.x:8501
 ```
 1. Upload an image
 2. Go to "✂️ Cropping" tab
-3. Adjust X, Y, Width, Height sliders OR use preset buttons:
-   - 🟩 Square (1:1)
-   - 🎬 Cinema (16:9)
-   - 📱 Portrait (9:16)
-   - 🖼️ Classic (4:3)
-4. See preview with selection overlay
-5. Click "Apply Crop" to execute
+3. Choose selection mode:
+   
+   🖱️ INTERACTIVE MODE (Recommended):
+   - Drag to move the selection box
+   - Resize from corners
+   - Click preset buttons to apply aspect ratio constraints
+   - Supported ratios: Free, 1:1, 16:9, 9:16, 4:3, 3:2
+   
+   🎚️ SLIDER MODE (Precise):
+   - Fine-tune with X, Y, Width, Height sliders
+   - Use preset buttons for quick aspect ratio changes:
+     - 🟩 Square (1:1)
+     - 🎬 Cinema (16:9)
+     - 📱 Portrait (9:16)
+     - 🖼️ Classic (4:3)
+   - See real-time preview with selection overlay
+
+4. Review crop preview in split view
+5. Click "✂️ Apply Crop" to execute
 ```
 
 ## 🔧 API Endpoints
