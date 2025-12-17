@@ -5,7 +5,10 @@ from components.sidebar import render_sidebar
 from components.history import render_history
 from components.gallery import render_gallery
 from components.image_view import render_image_view
+from components.upload_image import upload_image
 from datetime import datetime
+from streamlit_scroll_to_top import scroll_to_here
+
 
 # ==================== CONFIGURATION ====================
 st.set_page_config(
@@ -33,11 +36,11 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ==================== SIDEBAR ====================
-render_sidebar()
-
 # ==================== CONTENU PRINCIPAL ====================
 if st.session_state.current_image is not None:
+    # ==================== SIDEBAR ====================
+    render_sidebar()
+    
     # Historique
     render_history()
     
@@ -46,6 +49,27 @@ if st.session_state.current_image is not None:
     
     # Vue principale
     render_image_view()
+
+    st.markdown("---")
+    
+    # Bouton pour revenir à l'accueil - Design amélioré
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("📤 Charger une nouvelle image", 
+                     type="primary",
+                     help="Retour à l'accueil pour uploader une nouvelle image", 
+                     use_container_width=True):
+            # Réinitialiser l'état pour revenir à l'accueil
+            st.session_state.current_image = None
+            st.session_state.original_image = None
+            st.session_state.history = []
+            st.session_state.history_index = 0
+            st.session_state.operations_count = 0
+            st.session_state.gallery = []
+            #scroll to the header
+            st.session_state.scroll_to_header = True 
+            scroll_to_here(0, key='header')  # Scroll to the header of the page
+            st.rerun()
 
 else:
     # ==================== PAGE D'ACCUEIL ====================
@@ -89,7 +113,7 @@ else:
         """, unsafe_allow_html=True)
     
     # Deuxième ligne de features
-    col_feat4, col_feat5, col_feat6 = st.columns(3)
+    col_feat4, col_feat6 = st.columns(2)
     
     with col_feat4:
         st.markdown("""
@@ -100,14 +124,14 @@ else:
         </div>
         """, unsafe_allow_html=True)
     
-    with col_feat5:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="icon-large">⚡</div>
-            <h3>Traitement Batch</h3>
-            <p>Traitez plusieurs images simultanément avec les mêmes paramètres.</p>
-        </div>
-        """, unsafe_allow_html=True)
+    #with col_feat5:
+    #    st.markdown(
+    #    <div class="feature-card">
+    #        <div class="icon-large">⚡</div>
+    #        <h3>Traitement Batch</h3>
+    #        <p>Traitez plusieurs images simultanément avec les mêmes paramètres.</p>
+    #    </div>
+    #    , unsafe_allow_html=True)
     
     with col_feat6:
         st.markdown("""
@@ -144,7 +168,6 @@ else:
         -  Prétraitement
         -  Transformations
         -  Analyse
-        -  Batch & Presets
         """)
     
     with guide_col3:
@@ -162,24 +185,25 @@ else:
     # Dernière section avec CTA
     st.markdown("---")
     st.markdown("""
-    <div style="text-align: center; padding: 3rem;">
+    <div style="text-align: center; padding: 2rem;">
         <h2>Prêt à commencer ?</h2>
         <p style="font-size: 1.2rem; margin-bottom: 2rem;">
-            Importez votre première image dans la barre latérale pour découvrir toutes les fonctionnalités !
+            Importez votre première image ici pour découvrir toutes les fonctionnalités !
         </p>
-        <div style="font-size: 3rem; margin: 2rem 0;">
+        <div style="font-size: 3rem;">
             ↓
         </div>
     </div>
     """, unsafe_allow_html=True)
 
+    upload_image()
 # ==================== FOOTER ====================
-st.markdown("---")
+#st.markdown("---")
 col_foot1, col_foot2, col_foot3 = st.columns(3)
 
 with col_foot1:
     st.markdown("**ImageFlow Pro v1.0**")
-    st.caption("© 2024 - Plateforme de traitement d'images")
+    st.caption("© 2025 - Plateforme de traitement d'images")
 
 with col_foot2:
     st.markdown("**Performance**")

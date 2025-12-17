@@ -1,6 +1,6 @@
 from functools import lru_cache
-from ..domain.interfaces import IImageProcessor
-from ..infrastructure.image_processor import ImageProcessor
+from backend.app.domain.interfaces import IImageProcessor
+from backend.app.infrastructure.image_processor import ImageProcessor
 
 @lru_cache()
 def get_image_processor() -> IImageProcessor:

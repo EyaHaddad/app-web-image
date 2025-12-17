@@ -88,7 +88,7 @@ def apply_custom_css():
         background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
         color: white; 
         border-radius: 15px;
-        padding: 1.5rem;
+        padding: 1rem;
         text-align: center;
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -355,6 +355,81 @@ def apply_custom_css():
     .stCodeBlock {
         background: rgba(15, 23, 42, 0.9) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    /* ==================== ONGLETS PLUS VISIBLES ==================== */
+    /* Container des onglets */
+    div[data-baseweb="tab-list"] {
+        gap: 10px !important;
+        background-color: transparent !important;
+        padding: 15px 0 !important;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    /* Boutons des onglets */
+    div[data-baseweb="tab-list"] button {
+        font-size: 32px !important;
+        padding: 20px 30px !important;
+        font-weight: 80 !important;
+        min-width: 40px !important;
+        height: 40px !important;
+        border-radius: 15px !important;
+        background: linear-gradient(135deg, rgba(51, 65, 85, 0.95) 0%, rgba(71, 85, 105, 0.95) 100%) !important;
+        border: 3px solid rgba(255, 255, 255, 0.4) !important;
+        color: #FFFFFF !important;
+        transition: all 0.3s ease !important;
+        backdrop-filter: blur(15px) !important;
+        letter-spacing: 1px !important;
+        text-shadow: 
+            0 0 10px rgba(255, 255, 255, 0.3),
+            0 2px 6px rgba(0, 0, 0, 0.6),
+            0 0 20px rgba(255, 255, 255, 0.2) !important;
+        line-height: 1.3 !important;
+        filter: brightness(1.1) !important;
+    }
+    
+    /* Onglet actif */
+    div[data-baseweb="tab-list"] button[aria-selected="true"] {
+        background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%) !important;
+        border: 4px solid #93c5fd !important;
+        font-weight: 900 !important;
+        box-shadow: 
+            0 8px 25px rgba(59, 130, 246, 0.6),
+            0 0 30px rgba(147, 197, 253, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+        transform: scale(1.08) !important;
+        color: #FFFFFF !important;
+        text-shadow: 
+            0 0 15px rgba(255, 255, 255, 0.5),
+            0 3px 10px rgba(0, 0, 0, 0.5),
+            0 0 25px rgba(255, 255, 255, 0.3) !important;
+        filter: brightness(1.2) contrast(1.1) !important;
+    }
+    
+    /* Hover sur les onglets */
+    div[data-baseweb="tab-list"] button:hover {
+        background: rgba(30, 41, 59, 0.9) !important;
+        border-color: var(--accent) !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    /* Contenu des onglets */
+    div[data-baseweb="tab-panel"] {
+        padding-top: 30px !important;
+        animation: fadeIn 0.3s ease-in !important;
+    }
+    
+    /* Animation pour le contenu */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
     
 </style>

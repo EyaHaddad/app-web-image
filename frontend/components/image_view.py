@@ -8,16 +8,17 @@ from utils.helpers import create_split_view, image_to_bytes
 from utils.visualization import display_histogram
 from services.api_client import apply_operation
 from components.history import add_to_history
+from components.crop import render_crop
 
 def render_image_view():
     if st.session_state.current_image is not None:
-        # Navigation par onglets
+        # Navigation par onglets (styles appliqués via styles.py)
         tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
             "🏠 Vue d'ensemble",
+            "✂️ Cropping",
             "🎨 Prétraitement",
             "🔧 Transformations", 
             "📊 Analyse",
-            "⚡ Batch & Presets",
             "💾 Export"
         ])
         
@@ -25,26 +26,53 @@ def render_image_view():
         with tab1:
             st.markdown("### 👁️ Aperçu de l'image")
             
-            # Vue split avec curseur
-            col_view1, col_view2 = st.columns(2)
+            # Layout à deux colonnes: Image + Infos
+            col_img, col_info = st.columns([2, 1], gap="large")
             
-            with col_view1:
-                st.markdown("#### Image originale")
-                st.image(st.session_state.original_image, 
-                        use_container_width=True,
-                        caption=f"Dimensions: {st.session_state.original_image.size[0]}×{st.session_state.original_image.size[1]}")
+            with col_img:
+                st.markdown("#### 📸 Image actuelle")
+                
+                # Conteneur avec hauteur limité pour l'image
+                with st.container(border=True, height=500):
+                    st.image(st.session_state.original_image, 
+                            use_container_width=True,
+                            caption=f"Dimensions: {st.session_state.original_image.size[0]}×{st.session_state.current_image.size[1]} px")
             
-       
-            # Bouton pour vue split
-            if st.button("🔍 Vue comparée côte à côte", use_container_width=True):
-                split_view = create_split_view(st.session_state.original_image, 
-                                              st.session_state.current_image)
-                st.image(split_view, use_container_width=True, 
-                        caption="Comparaison avant/après")
+            with col_info:
+                st.markdown("#### ℹ️ Informations")
+                
+                # Dimensions
+                with st.container(border=True):
+                    st.markdown("**Dimensions**")
+                    st.write(f"🔸 Largeur: {st.session_state.original_image.size[0]} px")
+                    st.write(f"🔸 Hauteur: {st.session_state.original_image.size[1]} px")
+                    st.write(f"🔸 Mode: {st.session_state.original_image.mode}")
+                
+                # Comparaison avec original
+                with st.container(border=True):
+                    st.markdown("**Comparaison**")
+                    original_pixels = st.session_state.original_image.size[0] * st.session_state.original_image.size[1]
+                    current_pixels = st.session_state.current_image.size[0] * st.session_state.current_image.size[1]
+                    
+                    #if current_pixels != original_pixels:
+                    reduction = ((original_pixels - current_pixels) / original_pixels) * 100
+                    st.write(f"📉 Réduction: {reduction:.1f}%")
+                    #else:
+                    #    st.write(f"📊 Taille inchangée")
+                
+                # Historique
+                with st.container(border=True):
+                    st.markdown("**Historique**")
+                    operations_applied = len([h for h in st.session_state.history 
+                                            if h['operation'] != 'Original'])
+                    st.write(f"✂️ Opérations: {operations_applied}")
+                    st.write(f"📍 Position: {st.session_state.history_index + 1}/{len(st.session_state.history)}")
             
-            # Métriques rapides
-            st.markdown("### 📈 Métriques")
-            col_met1, col_met2, col_met3 = st.columns(3)
+            # Métriques détaillées en dessous
+            st.markdown("---")
+            st.markdown("### 📊 Analyse détaillée")
+            
+            col_met1, col_met2, col_met3, col_met4 = st.columns(4)
             
             with col_met1:
                 original_pixels = st.session_state.original_image.size[0] * st.session_state.original_image.size[1]
@@ -58,15 +86,45 @@ def render_image_view():
                 current_arr = np.array(st.session_state.current_image.convert('RGB'))
                 if original_arr.shape == current_arr.shape:
                     diff = np.abs(original_arr.astype(float) - current_arr.astype(float)).mean()
-                    st.metric("Différence moyenne", f"{diff:.1f}%")
+                    st.metric("Différence", f"{diff:.1f}%")
+                else:
+                    st.metric("Différence", "N/A")
             
             with col_met3:
                 operations_applied = len([h for h in st.session_state.history 
                                         if h['operation'] != 'Original'])
-                st.metric("Opérations appliquées", operations_applied)
-        
-        # ==================== TAB 2: PRÉTRAITEMENT ====================
+                st.metric("Opérations", operations_applied)
+            
+            with col_met4:
+                file_size_kb = len(image_to_bytes(st.session_state.current_image)) / 1024
+                st.metric("Taille estimée", f"{file_size_kb:.1f} KB")
+            
+            # Comparaison Avant/Après
+            """st.markdown("---")
+            st.markdown("### 🔄 Comparaison Avant/Après")
+            
+            col_before, col_after = st.columns(2)
+            
+            with col_before:
+                st.markdown("**Image originale**")
+                with st.container(border=True, height=350):
+                    st.image(st.session_state.original_image, 
+                            use_container_width=True,
+                            caption=f"{st.session_state.original_image.size[0]}×{st.session_state.original_image.size[1]}")
+            
+            with col_after:
+                st.markdown("**Image actuelle**")
+                with st.container(border=True, height=350):
+                    st.image(st.session_state.current_image, 
+                            use_container_width=True,
+                            caption=f"{st.session_state.current_image.size[0]}×{st.session_state.current_image.size[1]}")
+        """
+        # ==================== TAB 2: CROPPING ====================
         with tab2:
+            render_crop()
+        
+        # ==================== TAB 3: PRÉTRAITEMENT ====================
+        with tab3:
             st.markdown("### 🎨 Opérations de prétraitement")
             
             # Accordéon pour les différentes catégories
@@ -199,8 +257,8 @@ def render_image_view():
                         }
                         apply_operation("Redimensionnement", params, st.session_state.current_image, on_success_callback)
         
-        # ==================== TAB 3: TRANSFORMATIONS ====================
-        with tab3:
+        # ==================== TAB 4: TRANSFORMATIONS ====================
+        with tab4:
             st.markdown("###  Transformations géométriques et visuelles")
             
             col_trans1, col_trans2 = st.columns(2)
@@ -287,69 +345,68 @@ def render_image_view():
                     params = {'edge_detection': edge_method}
                     apply_operation(f"Détection {edge_method}", params, st.session_state.current_image, on_success_callback)
         
-        # ==================== TAB 4: ANALYSE ====================
-        with tab4:
+        # ==================== TAB 5: ANALYSE ====================
+        with tab5:
             st.markdown("### 📊 Analyse approfondie")
             
-            col_anal1, col_anal2 = st.columns(2)
+            """col_anal1, col_anal2 = st.columns(2)
+            with col_anal1:"""
+            st.markdown("#### 📈 Histogramme interactif")
             
-            with col_anal1:
-                st.markdown("#### 📈 Histogramme interactif")
-                
-                hist_mode = st.radio(
-                    "Mode d'affichage",
-                    ["RGB complet", "Par canal"],
-                    horizontal=True
-                )
-                
-                if hist_mode == "RGB complet":
-                    fig = display_histogram(st.session_state.current_image, "interactive")
-                    st.plotly_chart(fig, use_container_width=True)
-                elif hist_mode == "Par canal":
-                    # Afficher les histogrammes par canal séparément
-                    tabs_r, g, b = st.tabs(["🔴 Rouge", "🟢 Vert", "🔵 Bleu"])
-                    
-                    img_array = np.array(st.session_state.current_image.convert('RGB'))
-                    
-                    with tabs_r:
-                        fig_r = go.Figure()
-                        hist_r = np.histogram(img_array[:,:,0].flatten(), bins=256, range=[0, 256])[0]
-                        fig_r.add_trace(go.Bar(x=list(range(256)), y=hist_r, marker_color='red'))
-                        fig_r.update_layout(title="Canal Rouge", height=300)
-                        st.plotly_chart(fig_r, use_container_width=True)
-                    
-                    with g:
-                        fig_g = go.Figure()
-                        hist_g = np.histogram(img_array[:,:,1].flatten(), bins=256, range=[0, 256])[0]
-                        fig_g.add_trace(go.Bar(x=list(range(256)), y=hist_g, marker_color='green'))
-                        fig_g.update_layout(title="Canal Vert", height=300)
-                        st.plotly_chart(fig_g, use_container_width=True)
-                    
-                    with b:
-                        fig_b = go.Figure()
-                        hist_b = np.histogram(img_array[:,:,2].flatten(), bins=256, range=[0, 256])[0]
-                        fig_b.add_trace(go.Bar(x=list(range(256)), y=hist_b, marker_color='blue'))
-                        fig_b.update_layout(title="Canal Bleu", height=300)
-                        st.plotly_chart(fig_b, use_container_width=True)
+            hist_mode = st.radio(
+                "Mode d'affichage",
+                ["RGB complet", "Par canal"],
+                horizontal=True
+            )
             
-           
-                st.markdown("---")
-                st.markdown("#### 📊 Statistiques")
+            if hist_mode == "RGB complet":
+                fig = display_histogram(st.session_state.current_image, "interactive")
+                st.plotly_chart(fig, use_container_width=True)
+            elif hist_mode == "Par canal":
+                # Afficher les histogrammes par canal séparément
+                tabs_r, g, b = st.tabs(["🔴 Rouge", "🟢 Vert", "🔵 Bleu"])
                 
-                # Calculer les statistiques
                 img_array = np.array(st.session_state.current_image.convert('RGB'))
                 
-                col_stats1, col_stats2 = st.columns(2)
-                with col_stats1:
-                    st.metric("Moyenne", f"{img_array.mean():.1f}")
-                    st.metric("Écart-type", f"{img_array.std():.1f}")
+                with tabs_r:
+                    fig_r = go.Figure()
+                    hist_r = np.histogram(img_array[:,:,0].flatten(), bins=256, range=[0, 256])[0]
+                    fig_r.add_trace(go.Bar(x=list(range(256)), y=hist_r, marker_color='red'))
+                    fig_r.update_layout(title="Canal Rouge", height=300)
+                    st.plotly_chart(fig_r, use_container_width=True)
                 
-                with col_stats2:
-                    st.metric("Minimum", f"{img_array.min()}")
-                    st.metric("Maximum", f"{img_array.max()}")
+                with g:
+                    fig_g = go.Figure()
+                    hist_g = np.histogram(img_array[:,:,1].flatten(), bins=256, range=[0, 256])[0]
+                    fig_g.add_trace(go.Bar(x=list(range(256)), y=hist_g, marker_color='green'))
+                    fig_g.update_layout(title="Canal Vert", height=300)
+                    st.plotly_chart(fig_g, use_container_width=True)
+                
+                with b:
+                    fig_b = go.Figure()
+                    hist_b = np.histogram(img_array[:,:,2].flatten(), bins=256, range=[0, 256])[0]
+                    fig_b.add_trace(go.Bar(x=list(range(256)), y=hist_b, marker_color='blue'))
+                    fig_b.update_layout(title="Canal Bleu", height=300)
+                    st.plotly_chart(fig_b, use_container_width=True)
+        
+        
+            st.markdown("---")
+            st.markdown("#### 📊 Statistiques")
+            
+            # Calculer les statistiques
+            img_array = np.array(st.session_state.current_image.convert('RGB'))
+            
+            col_stats1, col_stats2 = st.columns(2)
+            with col_stats1:
+                st.metric("Moyenne", f"{img_array.mean():.1f}")
+                st.metric("Écart-type", f"{img_array.std():.1f}")
+            
+            with col_stats2:
+                st.metric("Minimum", f"{img_array.min()}")
+                st.metric("Maximum", f"{img_array.max()}")
         
         # ==================== TAB 5: BATCH & PRESETS ====================
-        with tab5:
+        """with tab5:
             st.markdown("### ⚡ Traitement par lots et presets")
             
             col_batch1, col_batch2 = st.columns(2)
@@ -447,14 +504,103 @@ def render_image_view():
                             if st.button("🗑️", key=f"del_preset_{name}"):
                                 del st.session_state.presets[name]
                                 st.rerun()
-        
+        """
         # ==================== TAB 6: EXPORT ====================
         with tab6:
             st.markdown("### 💾 Exportation et téléchargement")
             
-            col_exp1, col_exp2 = st.columns(2)
+            st.markdown("#### 🖼️ Galerie d'export")
             
-            with col_exp2:
+            # Miniatures des images de l'historique avec navigation améliorée
+            if st.session_state.history:
+                # Contrôles de navigation
+                col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
+                
+                with col_nav1:
+                    st.write(f"**Total:** {len(st.session_state.history)} étapes")
+                
+                with col_nav3:
+                    items_per_page = st.selectbox(
+                        "Par page",
+                        [4, 6, 8],
+                        label_visibility="collapsed"
+                    )
+                
+                # Pagination
+                total_pages = (len(st.session_state.history) + items_per_page - 1) // items_per_page
+                
+                if total_pages > 1:
+                    page = st.slider(
+                        "Navigation",
+                        0,
+                        total_pages - 1,
+                        0,
+                        label_visibility="collapsed",
+                        key="history_page"
+                    )
+                else:
+                    page = 0
+                
+                st.caption(f"Page {page + 1}/{total_pages}")
+                
+                # Afficher les miniatures de la page actuelle
+                start_idx = page * items_per_page
+                end_idx = min(start_idx + items_per_page, len(st.session_state.history))
+                
+                cols = st.columns(min(items_per_page, end_idx - start_idx))
+                
+                for col_idx, history_idx in enumerate(range(start_idx, end_idx)):
+                    item = st.session_state.history[history_idx]
+                    with cols[col_idx]:
+                        # Miniature
+                        thumb = item['image'].resize((120, 120), Image.LANCZOS)
+                        st.image(thumb, use_container_width=True)
+                        
+                        # Informations
+                        st.caption(f"**{item['operation']}**")
+                        st.caption(f"Étape {history_idx}")
+                        
+                        # Bouton de téléchargement
+                        buf_step = io.BytesIO()
+                        item['image'].save(buf_step, format="PNG")
+                        buf_step.seek(0)
+                        
+                        st.download_button(
+                            label="📥",
+                            data=buf_step,
+                            file_name=f"etape_{history_idx}_{item['operation'].replace(' ', '_')}.png",
+                            mime="image/png",
+                            key=f"dl_step_{history_idx}",
+                            use_container_width=True
+                        )
+                
+                # Télécharger tout l'historique en ZIP
+                if st.button("📦 Télécharger tout l'historique (ZIP)", 
+                            use_container_width=True,
+                            type="primary"):
+                    import zipfile
+                    
+                    buf_zip = io.BytesIO()
+                    with zipfile.ZipFile(buf_zip, 'w') as zip_file:
+                        for idx, item in enumerate(st.session_state.history):
+                            img_buf = io.BytesIO()
+                            item['image'].save(img_buf, format="PNG")
+                            img_buf.seek(0)
+                            zip_file.writestr(f"etape_{idx}_{item['operation'].replace(' ', '_')}.png", img_buf.getvalue())
+                    
+                    buf_zip.seek(0)
+                    st.download_button(
+                        label="✅ Télécharger ZIP",
+                        data=buf_zip,
+                        file_name="historique_complet.zip",
+                        mime="application/zip",
+                        key="dl_all_zip",
+                        use_container_width=True
+                    )
+                    st.success("✅ ZIP prêt au téléchargement!")
+                
+                st.markdown("---")
+
                 st.markdown("#### 📋 Rapport d'analyse")
                 
                 if st.button("📊 Générer un rapport", 
@@ -488,32 +634,8 @@ def render_image_view():
                         use_container_width=True
                     )
                 
-                st.markdown("---")
-                st.markdown("#### 🖼️ Galerie d'export")
-                
-                # Miniatures des images de l'historique
-                if st.session_state.history:
-                    cols = st.columns(min(4, len(st.session_state.history)))
-                    for idx, item in enumerate(st.session_state.history[:4]):
-                        with cols[idx % 4]:
-                            # Créer une miniature
-                            thumb = item['image'].resize((100, 100), Image.LANCZOS)
-                            st.image(thumb, caption=f"Étape {idx}")
-                            
-                            # Bouton de téléchargement pour chaque étape
-                            buf_step = io.BytesIO()
-                            item['image'].save(buf_step, format="PNG")
-                            buf_step.seek(0)
-                            
-                            st.download_button(
-                                label=f"📥 Étape {idx}",
-                                data=buf_step,
-                                file_name=f"etape_{idx}.png",
-                                mime="image/png",
-                                key=f"dl_step_{idx}",
-                                use_container_width=True
-                            )
 
 def on_success_callback(result_image, operation_type, params):
     """Callback called when an operation is successful"""
     add_to_history(result_image, operation_type, params)
+    st.rerun()  # Force la mise à jour du sidebar

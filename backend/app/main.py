@@ -1,11 +1,3 @@
-import sys
-import os
-from pathlib import Path
-
-# Fix Python path to find the app module
-current_dir = Path(__file__).resolve().parent
-sys.path.insert(0, str(current_dir))
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -45,29 +37,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Try to import routers - with proper error handling
+# Import routers
 try:
-    # Try relative import first
-    from .api.preprocess import router as preprocess_router
+    from backend.app.api.preprocess import router as preprocess_router
     logger.info("✅ Successfully imported preprocess router")
-except ImportError:
-    try:
-        # Try absolute import
-        from api.preprocess import router as preprocess_router
-        logger.info("✅ Successfully imported preprocess router (absolute)")
-    except ImportError as e:
-        logger.error(f"❌ Failed to import routers: {e}")
-        # Create a simple test router for debugging
-        from fastapi import APIRouter
-        preprocess_router = APIRouter()
-        
-        @preprocess_router.get("/test")
-        async def test():
-            return {"message": "Test endpoint - imports failed"}
-        
-        @preprocess_router.post("/preprocess")
-        async def dummy_preprocess():
-            return {"error": "Import failed - check logs"}
+except ImportError as e:
+    # Log full stack trace to help diagnose missing deps (e.g., OpenCV)
+    logger.exception(f"❌ Failed to import routers: {e}")
+    # Create a simple test router for debugging
+    from fastapi import APIRouter
+    from fastapi.responses import JSONResponse
+    preprocess_router = APIRouter()
+    
+    @preprocess_router.get("/test")
+    async def test():
+        return {"message": "Test endpoint - imports failed"}
+    
+    @preprocess_router.post("/preprocess")
+    async def dummy_preprocess():
+        # Return explicit 500 to signal frontend this is an error
+        return JSONResponse({"error": "Import failed - check logs"}, status_code=500)
 
 # Include router
 app.include_router(preprocess_router, prefix="/api", tags=["Image Processing"])

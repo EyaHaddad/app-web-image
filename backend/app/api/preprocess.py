@@ -3,9 +3,9 @@ from fastapi.responses import StreamingResponse, JSONResponse
 import io
 import time
 from typing import Optional
-from ..domain.interfaces import IImageProcessor
-from ..domain.models import ImageProcessingParams
-from .dependencies import get_image_processor
+from backend.app.domain.interfaces import IImageProcessor
+from backend.app.domain.models import ImageProcessingParams
+from backend.app.api.dependencies import get_image_processor
 
 router = APIRouter()
 
@@ -192,3 +192,62 @@ async def test_endpoint(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Test error: {str(e)}")
+
+
+@router.post("/crop")
+async def crop_image_endpoint(
+    file: UploadFile = File(..., description="Image file to crop"),
+    x: str = Form("0", description="Left coordinate (pixels)"),
+    y: str = Form("0", description="Top coordinate (pixels)"),
+    width: str = Form("100", description="Crop width (pixels)"),
+    height: str = Form("100", description="Crop height (pixels)"),
+    processor: IImageProcessor = Depends(get_image_processor)
+):
+    """
+    Crop an image to a specified rectangular region.
+    
+    Parameters:
+    - x: Left coordinate of the crop region (pixels)
+    - y: Top coordinate of the crop region (pixels)
+    - width: Width of the crop region (pixels)
+    - height: Height of the crop region (pixels)
+    """
+    try:
+        # Read file
+        contents = await file.read()
+        
+        # Validate file size (max 10MB)
+        if len(contents) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="File too large (max 10MB)")
+        
+        # Validate file type
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Parse parameters
+        try:
+            x_coord = int(x)
+            y_coord = int(y)
+            crop_width = int(width)
+            crop_height = int(height)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Crop parameters must be integers")
+        
+        # Validate parameters
+        if crop_width <= 0 or crop_height <= 0:
+            raise HTTPException(status_code=400, detail="Width and height must be positive")
+        
+        # Perform crop
+        result = processor.crop_image(contents, x_coord, y_coord, crop_width, crop_height)
+        
+        # Return as image
+        return StreamingResponse(
+            io.BytesIO(result),
+            media_type="image/png",
+            headers={"Content-Disposition": "inline; filename=cropped_image.png"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Crop failed: {str(e)}")

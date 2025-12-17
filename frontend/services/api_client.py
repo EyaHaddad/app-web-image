@@ -16,6 +16,7 @@ API_ENDPOINTS = {
     "histogram": "/histogram", 
     "segment": "/segment",
     "detect_faces": "/detect_faces",
+    "crop": "/crop",
     "test": "/test"
 }
 
@@ -41,18 +42,37 @@ def apply_operation(operation_type: str, params: dict, current_image: Image.Imag
                     timeout=30
                 )
                 
+                content_type = response.headers.get('Content-Type', '')
+
                 if response.status_code == 200:
-                    result = Image.open(io.BytesIO(response.content))
-                    
-                    # Notification de succès
-                    st.toast(f"✅ {operation_type} appliqué avec succès!", icon="✅")
-                    
-                    if on_success:
-                        on_success(result, operation_type, params)
-                        
-                    return result
+                    # N'ouvrir avec PIL que si c'est une image
+                    if content_type.startswith('image/'):
+                        try:
+                            result = Image.open(io.BytesIO(response.content))
+                        except Exception:
+                            st.error("❌ La réponse du backend n'est pas une image valide.")
+                            return None
+
+                        st.toast(f"✅ {operation_type} appliqué avec succès!", icon="✅")
+                        if on_success:
+                            on_success(result, operation_type, params)
+                        return result
+                    else:
+                        # 200 mais corps non-image (ex: JSON de debug)
+                        try:
+                            payload = response.json()
+                            st.error(f"❌ Réponse inattendue (JSON): {payload}")
+                        except Exception:
+                            st.error(f"❌ Réponse inattendue du backend (type {content_type}).")
+                        return None
                 else:
-                    st.error(f"❌ Erreur API: {response.text}")
+                    # Statut non 200: essayer de montrer un message clair
+                    try:
+                        payload = response.json()
+                        detail = payload.get('detail') if isinstance(payload, dict) else payload
+                        st.error(f"❌ Erreur API ({response.status_code}): {detail}")
+                    except Exception:
+                        st.error(f"❌ Erreur API ({response.status_code}): {response.text}")
                     return None
     except requests.exceptions.ConnectionError:
         st.error("🔌 Impossible de se connecter au backend. Vérifiez qu'il est démarré.")

@@ -60,9 +60,11 @@ dependencies = [
     { name = "numpy" },
     { name = "opencv-python" },
     { name = "pillow" },
+    { name = "plotly" },
     { name = "python-multipart" },
     { name = "requests" },
     { name = "streamlit" },
+    { name = "streamlit-scroll-to-top" },
 ]
 
 [package.metadata]
@@ -72,9 +74,11 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.2.6" },
     { name = "opencv-python", specifier = ">=4.12.0.88" },
     { name = "pillow", specifier = ">=12.0.0" },
+    { name = "plotly", specifier = ">=6.5.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "streamlit", specifier = ">=1.51.0" },
+    { name = "streamlit-scroll-to-top", specifier = ">=0.0.4" },
 ]
 
 [[package]]
@@ -773,6 +777,19 @@ wheels = [
 ]
 
 [[package]]
+name = "plotly"
+version = "6.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "narwhals" },
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/94/05/1199e2a03ce6637960bc1e951ca0f928209a48cfceb57355806a88f214cf/plotly-6.5.0.tar.gz", hash = "sha256:d5d38224883fd38c1409bef7d6a8dc32b74348d39313f3c52ca998b8e447f5c8", size = 7013624, upload-time = "2025-11-17T18:39:24.523Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e7/c3/3031c931098de393393e1f93a38dc9ed6805d86bb801acc3cf2d5bd1e6b7/plotly-6.5.0-py3-none-any.whl", hash = "sha256:5ac851e100367735250206788a2b1325412aa4a4917a4fe3e6f0bc5aa6f3d90a", size = 9893174, upload-time = "2025-11-17T18:39:20.351Z" },
+]
+
+[[package]]
 name = "protobuf"
 version = "6.33.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1131,6 +1148,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/59/6d/327ddd5fc35fcf2aeecb4040668337f5565a1c6c95b1e892b8bfd4bb9031/streamlit-1.51.0.tar.gz", hash = "sha256:1e742a9c0b698f466c6f5bf58d333beda5a1fbe8de660743976791b5c1446ef6", size = 9742904, upload-time = "2025-10-29T17:07:39.082Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/39/60/868371b6482ccd9ef423c6f62650066cf8271fdb2ee84f192695ad6b7a96/streamlit-1.51.0-py3-none-any.whl", hash = "sha256:4008b029f71401ce54946bb09a6a3e36f4f7652cbb48db701224557738cfda38", size = 10171702, upload-time = "2025-10-29T17:07:35.97Z" },
+]
+
+[[package]]
+name = "streamlit-scroll-to-top"
+version = "0.0.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "streamlit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d2/06/26f13270ea77f0fddec15b11955dad1c1130897c87f6a4c3040221051ef7/streamlit_scroll_to_top-0.0.4.tar.gz", hash = "sha256:148bbaa31ca91444a94d4b1f846bcdc0de5f6b2eccaf9e815805754892a9d7f6", size = 402901, upload-time = "2024-12-12T00:40:04.916Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/89/9099f3c5fab4b7ecef73a16bb80a59d6501d5b8ae904df162700460d15e1/streamlit_scroll_to_top-0.0.4-py3-none-any.whl", hash = "sha256:4e894ee1377fd0d65c799c39463d382d9a72fb9c592dde566ea3f6c109154128", size = 2273951, upload-time = "2024-12-12T00:40:00.918Z" },
 ]
 
 [[package]]

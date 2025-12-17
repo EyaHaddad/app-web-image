@@ -333,3 +333,53 @@ class ImageProcessor(IImageProcessor):
         img_array = np.power(img_array, gamma)
         img_array = np.uint8(img_array * 255)
         return Image.fromarray(img_array)
+
+    def crop_image(self, image_bytes: bytes, x: int, y: int, width: int, height: int) -> bytes:
+        """
+        Crop an image to the specified region.
+        
+        Args:
+            image_bytes: Original image bytes
+            x: Left coordinate (pixels)
+            y: Top coordinate (pixels)
+            width: Width of the crop region
+            height: Height of the crop region
+            
+        Returns:
+            Cropped image bytes
+        """
+        try:
+            img = Image.open(io.BytesIO(image_bytes))
+            
+            # Ensure coordinates and dimensions are positive integers
+            x = max(0, int(x))
+            y = max(0, int(y))
+            width = max(1, int(width))
+            height = max(1, int(height))
+            
+            # Get image dimensions
+            img_width, img_height = img.size
+            
+            # Validate crop region is within image bounds
+            if x >= img_width or y >= img_height:
+                raise ValueError("Crop region is outside image bounds")
+            
+            # Adjust crop region to fit within image
+            x2 = min(x + width, img_width)
+            y2 = min(y + height, img_height)
+            
+            # Ensure minimum size
+            if x2 <= x or y2 <= y:
+                raise ValueError("Crop region has invalid dimensions")
+            
+            # Crop the image (PIL uses (left, top, right, bottom))
+            cropped = img.crop((x, y, x2, y2))
+            
+            # Convert to bytes
+            buf = io.BytesIO()
+            cropped.save(buf, format="PNG")
+            buf.seek(0)
+            return buf.getvalue()
+            
+        except Exception as e:
+            raise RuntimeError(f"Crop operation failed: {str(e)}")

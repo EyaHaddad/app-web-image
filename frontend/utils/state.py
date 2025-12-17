@@ -14,7 +14,7 @@ def init_session_state():
         'session_start': datetime.now(),
         'favorites': [],
         'presets': {},
-        'batch_queue': []
+        #'batch_queue': []
     }
     
     for key, default_value in DEFAULT_STATES.items():
