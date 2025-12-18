@@ -148,7 +148,7 @@ def render_image_view():
                             'equalize': str(equalize).lower(),
                             'normalize': str(normalize).lower()
                         }
-                        apply_operation("Conversions couleur", params, st.session_state.current_image, on_success_callback)
+                        apply_operation(st.session_state.current_image, "preprocess", params, on_success_callback)
             
             with st.expander("🎯 Seuillage", expanded=True):
                 col_thresh1, col_thresh2 = st.columns(2)
@@ -178,7 +178,7 @@ def render_image_view():
                             'threshold': str(threshold_value),
                             'threshold_type': threshold_type
                         }
-                        apply_operation("Seuillage", params, st.session_state.current_image, on_success_callback)
+                        apply_operation(st.session_state.current_image, "preprocess", params, on_success_callback)
             
             with st.expander("🌫️ Filtres", expanded=True):
                 col_filt1, col_filt2 = st.columns(2)
@@ -208,7 +208,7 @@ def render_image_view():
                             'blur_type': blur_type,
                             'blur_kernel': str(blur_kernel)
                         }
-                        apply_operation(f"Filtre {blur_type}", params, st.session_state.current_image, on_success_callback)
+                        apply_operation(st.session_state.current_image, "preprocess", params, on_success_callback)
             
             with st.expander("📐 Redimensionnement", expanded=True):
                 col_res1, col_res2 = st.columns(2)
@@ -255,7 +255,7 @@ def render_image_view():
                             'resize_width': str(new_width),
                             'resize_height': str(new_height)
                         }
-                        apply_operation("Redimensionnement", params, st.session_state.current_image, on_success_callback)
+                        apply_operation(st.session_state.current_image, "preprocess", params, on_success_callback)
         
         # ==================== TAB 4: TRANSFORMATIONS ====================
         with tab4:
@@ -289,7 +289,7 @@ def render_image_view():
                     params['flip'] = flip_type
                 
                 if params:
-                    apply_operation("Transformations géométriques", params, st.session_state.current_image, on_success_callback)
+                    apply_operation(st.session_state.current_image, "preprocess", params, on_success_callback)
             
             #with col_trans2:
             st.markdown("---")
@@ -314,7 +314,7 @@ def render_image_view():
                     params['contrast'] = str(contrast)
                 
                 if params:
-                    apply_operation("Ajustements visuels", params, st.session_state.current_image, on_success_callback)
+                    apply_operation(st.session_state.current_image, "preprocess", params, on_success_callback)
             
             st.markdown("---")
             # Détection de contours
@@ -343,7 +343,7 @@ def render_image_view():
                         type="primary",
                         use_container_width=True):
                 params = {'edge_detection': edge_method}
-                apply_operation(f"Détection {edge_method}", params, st.session_state.current_image, on_success_callback)
+                apply_operation(st.session_state.current_image, "preprocess", params, on_success_callback)
     
         # ==================== TAB 5: ANALYSE ====================
         with tab5:
@@ -359,13 +359,6 @@ def render_image_view():
                     "Mode d'affichage",
                     ["RGB complet", "Par canal"],
                     horizontal=True
-                )
-            
-            with col_hist2:
-                hist_channel = st.selectbox(
-                    "Sélectionner le canal",
-                    ["all", "red", "green", "blue", "gray"],
-                    format_func=lambda x: {"all": "RGB complet", "red": "🔴 Rouge", "green": "🟢 Vert", "blue": "🔵 Bleu", "gray": "⚫ Gris"}[x]
                 )
             
             if hist_mode == "RGB complet":
@@ -392,28 +385,6 @@ def render_image_view():
                             st.success("✅ Histogramme généré avec succès!")
                         except Exception as e:
                             st.error(f"❌ Erreur: {str(e)}")
-                
-                with col_btn2:
-                    if st.button("🔄 Appliquer étirement histogramme", key="stretch_all"):
-                        try:
-                            stretched = apply_operation(
-                                st.session_state.current_image,
-                                "/preprocess",
-                                {
-                                    "stretch": "true",
-                                    "grayscale": "false",
-                                    "resize_width": "0",
-                                    "resize_height": "0",
-                                    "equalize": "false",
-                                    "normalize": "false"
-                                }
-                            )
-                            st.session_state.current_image = stretched
-                            add_to_history(stretched, "Stretch Histogram")
-                            st.success("✅ Étirement d'histogramme appliqué!")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ Erreur: {str(e)}")
             
             elif hist_mode == "Par canal":
                 # Afficher les histogrammes par canal séparément
@@ -424,13 +395,34 @@ def render_image_view():
                 with tabs_r:
                     fig_r = go.Figure()
                     hist_r = np.histogram(img_array[:,:,0].flatten(), bins=256, range=[0, 256])[0]
-                    fig_r.add_trace(go.Bar(x=list(range(256)), y=hist_r, marker_color='red', name='Rouge'))
+                    # Limiter Y au 98e percentile pour lisibilité
+                    y_max_r = float(np.percentile(hist_r, 98) * 1.1)
+                    fig_r.add_trace(go.Scatter(
+                        x=list(range(256)),
+                        y=hist_r,
+                        mode='lines',
+                        name='Rouge',
+                        line=dict(color='red', width=2.5),
+                        fill='tozeroy',
+                        fillcolor='rgba(255,0,0,0.15)',
+                        hovertemplate='Rouge<br>Valeur: %{x}<br>Fréquence: %{y}<extra></extra>'
+                    ))
                     fig_r.update_layout(
-                        title="Canal Rouge",
+                        title=dict(text="Canal Rouge", font=dict(size=18, color='#111827')),
                         height=400,
-                        xaxis_title="Valeur de pixel",
-                        yaxis_title="Fréquence",
-                        hovermode='x unified'
+                        xaxis=dict(
+                            gridcolor='rgba(200,200,200,0.3)', showgrid=True, zeroline=True,
+                            range=[0, 255], tickfont=dict(color='#000000', size=12)
+                        ),
+                        yaxis=dict(
+                            gridcolor='rgba(200,200,200,0.3)', showgrid=True, zeroline=True,
+                            range=[0, y_max_r], tickfont=dict(color='#000000', size=12)
+                        ),
+                        xaxis_title="Valeur de pixel (0-255)", xaxis_title_font=dict(size=14, color='#000000'),
+                        yaxis_title="Fréquence", yaxis_title_font=dict(size=14, color='#000000'),
+                        hovermode='x unified',
+                        plot_bgcolor='#ffffff', paper_bgcolor='white',
+                        margin=dict(l=40, r=20, t=50, b=40)
                     )
                     st.plotly_chart(fig_r, use_container_width=True)
                     
@@ -456,13 +448,33 @@ def render_image_view():
                 with g:
                     fig_g = go.Figure()
                     hist_g = np.histogram(img_array[:,:,1].flatten(), bins=256, range=[0, 256])[0]
-                    fig_g.add_trace(go.Bar(x=list(range(256)), y=hist_g, marker_color='green', name='Vert'))
+                    y_max_g = float(np.percentile(hist_g, 98) * 1.1)
+                    fig_g.add_trace(go.Scatter(
+                        x=list(range(256)),
+                        y=hist_g,
+                        mode='lines',
+                        name='Vert',
+                        line=dict(color='green', width=2.5),
+                        fill='tozeroy',
+                        fillcolor='rgba(0,255,0,0.15)',
+                        hovertemplate='Vert<br>Valeur: %{x}<br>Fréquence: %{y}<extra></extra>'
+                    ))
                     fig_g.update_layout(
-                        title="Canal Vert",
+                        title=dict(text="Canal Vert", font=dict(size=18, color='#111827')),
                         height=400,
-                        xaxis_title="Valeur de pixel",
-                        yaxis_title="Fréquence",
-                        hovermode='x unified'
+                        xaxis=dict(
+                            gridcolor='rgba(200,200,200,0.3)', showgrid=True, zeroline=True,
+                            range=[0, 255], tickfont=dict(color='#000000', size=12)
+                        ),
+                        yaxis=dict(
+                            gridcolor='rgba(200,200,200,0.3)', showgrid=True, zeroline=True,
+                            range=[0, y_max_g], tickfont=dict(color='#000000', size=12)
+                        ),
+                        xaxis_title="Valeur de pixel (0-255)", xaxis_title_font=dict(size=14, color='#000000'),
+                        yaxis_title="Fréquence", yaxis_title_font=dict(size=14, color='#000000'),
+                        hovermode='x unified',
+                        plot_bgcolor='#ffffff', paper_bgcolor='white',
+                        margin=dict(l=40, r=20, t=50, b=40)
                     )
                     st.plotly_chart(fig_g, use_container_width=True)
                     
@@ -488,13 +500,33 @@ def render_image_view():
                 with b:
                     fig_b = go.Figure()
                     hist_b = np.histogram(img_array[:,:,2].flatten(), bins=256, range=[0, 256])[0]
-                    fig_b.add_trace(go.Bar(x=list(range(256)), y=hist_b, marker_color='blue', name='Bleu'))
+                    y_max_b = float(np.percentile(hist_b, 98) * 1.1)
+                    fig_b.add_trace(go.Scatter(
+                        x=list(range(256)),
+                        y=hist_b,
+                        mode='lines',
+                        name='Bleu',
+                        line=dict(color='blue', width=2.5),
+                        fill='tozeroy',
+                        fillcolor='rgba(0,0,255,0.15)',
+                        hovertemplate='Bleu<br>Valeur: %{x}<br>Fréquence: %{y}<extra></extra>'
+                    ))
                     fig_b.update_layout(
-                        title="Canal Bleu",
+                        title=dict(text="Canal Bleu", font=dict(size=18, color='#111827')),
                         height=400,
-                        xaxis_title="Valeur de pixel",
-                        yaxis_title="Fréquence",
-                        hovermode='x unified'
+                        xaxis=dict(
+                            gridcolor='rgba(200,200,200,0.3)', showgrid=True, zeroline=True,
+                            range=[0, 255], tickfont=dict(color='#000000', size=12)
+                        ),
+                        yaxis=dict(
+                            gridcolor='rgba(200,200,200,0.3)', showgrid=True, zeroline=True,
+                            range=[0, y_max_b], tickfont=dict(color='#000000', size=12)
+                        ),
+                        xaxis_title="Valeur de pixel (0-255)", xaxis_title_font=dict(size=14, color='#000000'),
+                        yaxis_title="Fréquence", yaxis_title_font=dict(size=14, color='#000000'),
+                        hovermode='x unified',
+                        plot_bgcolor='#ffffff', paper_bgcolor='white',
+                        margin=dict(l=40, r=20, t=50, b=40)
                     )
                     st.plotly_chart(fig_b, use_container_width=True)
                     
@@ -517,57 +549,6 @@ def render_image_view():
                             except Exception as e:
                                 st.error(f"❌ Erreur: {str(e)}")
         
-            st.markdown("---")
-            st.markdown("#### 🔧 Opérations d'histogramme")
-            
-            col_ops1, col_ops2 = st.columns(2)
-            
-            with col_ops1:
-                if st.button("🔄 Étirement d'histogramme", key="stretch_op"):
-                    with st.spinner("Application de l'étirement..."):
-                        try:
-                            stretched = apply_operation(
-                                st.session_state.current_image,
-                                "/preprocess",
-                                {
-                                    "stretch": "true",
-                                    "grayscale": "false",
-                                    "resize_width": "0",
-                                    "resize_height": "0",
-                                    "equalize": "false",
-                                    "normalize": "false"
-                                }
-                            )
-                            st.session_state.current_image = stretched
-                            add_to_history(stretched, "Histogram Stretch")
-                            st.success("✅ Étirement appliqué!")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ Erreur: {str(e)}")
-            
-            with col_ops2:
-                if st.button("🎯 Égalisation d'histogramme", key="equalize_op"):
-                    with st.spinner("Application de l'égalisation..."):
-                        try:
-                            equalized = apply_operation(
-                                st.session_state.current_image,
-                                "/preprocess",
-                                {
-                                    "equalize": "true",
-                                    "grayscale": "false",
-                                    "resize_width": "0",
-                                    "resize_height": "0",
-                                    "stretch": "false",
-                                    "normalize": "false"
-                                }
-                            )
-                            st.session_state.current_image = equalized
-                            add_to_history(equalized, "Histogram Equalization")
-                            st.success("✅ Égalisation appliquée!")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ Erreur: {str(e)}")
-            
             st.markdown("---")
             st.markdown("#### 📊 Statistiques")
             
@@ -813,7 +794,27 @@ def render_image_view():
                     )
                 
 
-def on_success_callback(result_image, operation_type, params):
+def on_success_callback(result_image, endpoint, params):
     """Callback called when an operation is successful"""
-    add_to_history(result_image, operation_type, params)
-    st.rerun()  # Force la mise à jour du sidebar
+    # Déterminer le nom de l'opération basé sur les paramètres
+    operation_name = "Opération"
+    
+    if 'grayscale' in params or 'equalize' in params or 'normalize' in params:
+        operation_name = "Conversions couleur"
+    elif 'threshold' in params:
+        operation_name = "Seuillage"
+    elif 'blur_type' in params:
+        operation_name = f"Filtre {params.get('blur_type', 'unknown')}"
+    elif 'resize_width' in params:
+        operation_name = "Redimensionnement"
+    elif 'rotate_angle' in params or 'flip' in params:
+        operation_name = "Transformations géométriques"
+    elif 'brightness' in params or 'contrast' in params:
+        operation_name = "Ajustements visuels"
+    elif 'edge_detection' in params:
+        operation_name = f"Détection {params.get('edge_detection', 'unknown')}"
+    
+    # Ajouter à l'historique seulement si le résultat est une Image valide
+    if isinstance(result_image, Image.Image):
+        add_to_history(result_image, operation_name, params)
+        st.rerun()  # Force la mise à jour du sidebar

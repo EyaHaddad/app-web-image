@@ -4,6 +4,10 @@ import cv2
 import numpy as np
 from typing import Optional, Tuple, Dict, List
 import base64
+import matplotlib
+matplotlib.use('Agg')  # Backend non-interactif
+import matplotlib.pyplot as plt
+import seaborn as sns
 from ..domain.interfaces import IImageProcessor
 from ..domain.models import ImageProcessingParams, HistogramData, SegmentationResult, HistogramStats
 
@@ -238,7 +242,122 @@ class ImageProcessor(IImageProcessor):
             raise RuntimeError(f"Histogram calculation failed: {str(e)}")
     
     def generate_histogram_image(self, image_bytes: bytes, channel: str) -> bytes:
-        """Generate a histogram visualization as a PNG image with professional styling"""
+        """Generate a histogram visualization as a PNG image using matplotlib and seaborn"""
+        try:
+            img = Image.open(io.BytesIO(image_bytes))
+            cv_img = self._pil_to_cv2(img)
+            
+            # Set seaborn style for better aesthetics
+            sns.set_style("whitegrid")
+            sns.set_palette("husl")
+            
+            # Create figure with better size and DPI
+            fig, ax = plt.subplots(figsize=(12, 7), dpi=120)
+            
+            # Process and draw histogram based on channel
+            if channel == "gray" or len(cv_img.shape) == 2:
+                if len(cv_img.shape) == 3:
+                    cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+                hist = cv2.calcHist([cv_img], [0], None, [256], [0, 256])
+                hist = hist.flatten()
+                
+                # Limiter l'axe Y au 98ème percentile pour éviter les pics excessifs
+                y_max = np.percentile(hist[hist > 0], 98) * 1.15
+                
+                # Dessiner l'histogramme
+                ax.fill_between(range(256), hist, alpha=0.7, color='gray', edgecolor='black', linewidth=1.5)
+                ax.set_ylim(0, y_max)
+                title = f"Histogramme - Niveaux de gris"
+                
+                # Calculer les statistiques
+                mean_val = np.mean(cv_img)
+                std_val = np.std(cv_img)
+                min_val = np.min(cv_img)
+                max_val = np.max(cv_img)
+            
+            elif channel == "all":
+                colors = ['blue', 'green', 'red']
+                color_labels = ['Bleu', 'Vert', 'Rouge']
+                all_hist = []
+                
+                for channel_idx, (color, label) in enumerate(zip(colors, color_labels)):
+                    hist = cv2.calcHist([cv_img], [channel_idx], None, [256], [0, 256])
+                    hist = hist.flatten()
+                    all_hist.extend(hist)
+                    ax.plot(range(256), hist, color=color, label=label, linewidth=2, alpha=0.8)
+                    ax.fill_between(range(256), hist, alpha=0.2, color=color)
+                
+                # Limiter l'axe Y
+                y_max = np.percentile([h for h in all_hist if h > 0], 98) * 1.15
+                ax.set_ylim(0, y_max)
+                ax.legend(loc='upper right', framealpha=0.9, fontsize=11)
+                title = f"Histogramme - RGB"
+                
+                mean_val = np.mean(cv_img)
+                std_val = np.std(cv_img)
+                min_val = np.min(cv_img)
+                max_val = np.max(cv_img)
+            
+            else:
+                color_map_idx = {"blue": 0, "green": 1, "red": 2}
+                color_map_color = {"blue": 'blue', "green": 'green', "red": 'red'}
+                color_map_label = {"blue": 'Bleu', "green": 'Vert', "red": 'Rouge'}
+                
+                if channel in color_map_idx:
+                    hist = cv2.calcHist([cv_img], [color_map_idx[channel]], None, [256], [0, 256])
+                    hist = hist.flatten()
+                    
+                    # Limiter l'axe Y
+                    y_max = np.percentile(hist[hist > 0], 98) * 1.15
+                    
+                    ax.fill_between(range(256), hist, alpha=0.6, color=color_map_color[channel], 
+                                   edgecolor=color_map_color[channel], linewidth=2)
+                    ax.set_ylim(0, y_max)
+                    title = f"Histogramme - Canal {color_map_label[channel]}"
+                    
+                    # Statistiques du canal
+                    channel_data = cv_img[:, :, color_map_idx[channel]]
+                    mean_val = np.mean(channel_data)
+                    std_val = np.std(channel_data)
+                    min_val = np.min(channel_data)
+                    max_val = np.max(channel_data)
+            
+            # Configuration des axes et du graphique
+            ax.set_xlabel('Valeur de pixel (0-255)', fontsize=13, fontweight='bold')
+            ax.set_ylabel('Fréquence', fontsize=13, fontweight='bold')
+            ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
+            ax.set_xlim(0, 255)
+            ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            
+            # Ajouter une boîte de statistiques
+            stats_text = f'Statistiques:\n'
+            stats_text += f'Moyenne: {mean_val:.1f}\n'
+            stats_text += f'Écart-type: {std_val:.1f}\n'
+            stats_text += f'Min: {int(min_val)}\n'
+            stats_text += f'Max: {int(max_val)}'
+            
+            ax.text(0.98, 0.97, stats_text, transform=ax.transAxes,
+                   fontsize=10, verticalalignment='top', horizontalalignment='right',
+                   bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8, edgecolor='black', linewidth=1.5))
+            
+            plt.tight_layout()
+            
+            # Sauvegarder en bytes
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', dpi=120, bbox_inches='tight', facecolor='white', edgecolor='none')
+            buf.seek(0)
+            result = buf.getvalue()
+            plt.close(fig)
+            
+            return result
+        
+        except Exception as e:
+            raise RuntimeError(f"Histogram image generation failed: {str(e)}")
+
+    def generate_histogram_image_old(self, image_bytes: bytes, channel: str) -> bytes:
+        """Old OpenCV-based histogram generation (kept for reference)"""
         try:
             img = Image.open(io.BytesIO(image_bytes))
             cv_img = self._pil_to_cv2(img)
