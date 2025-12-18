@@ -29,9 +29,8 @@ st.markdown("""
     <p class="subtitle">Plateforme avancée de traitement et d'analyse d'images</p>
     <div style="text-align: center; margin-top: 1rem;">
         <span class="badge">⚡ Temps réel</span>
-        <span class="badge">🎨 15+ filtres</span>
-        <span class="badge">📊 Analyse avancée</span>
-        <span class="badge">🔒 Sécurisé</span>
+        <span class="badge">� 15+ opérations</span>
+        <span class="badge">📊 Analyse complète</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -45,7 +44,7 @@ if st.session_state.current_image is not None:
     render_history()
     
     # Galerie
-    render_gallery()
+    #render_gallery()
     
     # Vue principale
     render_image_view()
@@ -82,63 +81,84 @@ else:
     </div>
     """, unsafe_allow_html=True)
     
-    # Features grid
+    # Features grid - Features réelles
     col_feat1, col_feat2, col_feat3 = st.columns(3)
     
     with col_feat1:
         st.markdown("""
         <div class="feature-card">
-            <div class="icon-large">⚡</div>
-            <h3>Traitement Rapide</h3>
-            <p>Transformations en temps réel avec prévisualisation instantanée.</p>
+            <div class="icon-large">🌓</div>
+            <h3>Conversions de Couleur</h3>
+            <p>Niveaux de gris, égalisation d'histogramme, normalisation et correction gamma.</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col_feat2:
         st.markdown("""
         <div class="feature-card">
-            <div class="icon-large">🎨</div>
-            <h3>15+ Filtres</h3>
-            <p>Une collection complète de filtres et transformations avancées.</p>
+            <div class="icon-large">🌫️</div>
+            <h3>Filtres Avancés</h3>
+            <p>Flou gaussien, médian, bilatéral + détection de contours (Canny, Sobel, Laplacian).</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col_feat3:
         st.markdown("""
         <div class="feature-card">
-            <div class="icon-large">📊</div>
-            <h3>Analyse Avancée</h3>
-            <p>Histogrammes interactifs, segmentation RGB et statistiques détaillées.</p>
+            <div class="icon-large">🎯</div>
+            <h3>Seuillage Multi-type</h3>
+            <p>Seuillage binaire, inversé, adaptatif (moyenne/gaussien) et automatique (Otsu).</p>
         </div>
         """, unsafe_allow_html=True)
     
     # Deuxième ligne de features
-    col_feat4, col_feat6 = st.columns(2)
+    col_feat4, col_feat5, col_feat6 = st.columns(3)
     
     with col_feat4:
         st.markdown("""
         <div class="feature-card">
-            <div class="icon-large">🔄</div>
-            <h3>Historique Complet</h3>
-            <p>Undo/redo illimité et gestion d'historique avancée.</p>
+            <div class="icon-large">📐</div>
+            <h3>Transformations Géométriques</h3>
+            <p>Rotation, retournement (horizontal/vertical), redimensionnement intelligent et recadrage.</p>
         </div>
         """, unsafe_allow_html=True)
     
-    #with col_feat5:
-    #    st.markdown(
-    #    <div class="feature-card">
-    #        <div class="icon-large">⚡</div>
-    #        <h3>Traitement Batch</h3>
-    #        <p>Traitez plusieurs images simultanément avec les mêmes paramètres.</p>
-    #    </div>
-    #    , unsafe_allow_html=True)
+    with col_feat5:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="icon-large">🎨</div>
+            <h3>Ajustements de Luminosité</h3>
+            <p>Contraste, saturation, luminosité et netteté avec curseurs interactifs.</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col_feat6:
         st.markdown("""
         <div class="feature-card">
+            <div class="icon-large">📊</div>
+            <h3>Analyse Visuelle</h3>
+            <p>Histogrammes complets (RGB + Gris), segmentation couleur et statistiques détaillées.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Troisième ligne de features
+    col_feat7, col_feat8 = st.columns(2)
+    
+    with col_feat7:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="icon-large">🔄</div>
+            <h3>Historique Complet</h3>
+            <p>Undo/redo illimité avec galerie de vos traitements précédents.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_feat8:
+        st.markdown("""
+        <div class="feature-card">
             <div class="icon-large">💾</div>
-            <h3>Export Multi-format</h3>
-            <p>Exportez en PNG, JPEG, WebP avec qualité ajustable.</p>
+            <h3>Export Flexible</h3>
+            <p>Téléchargez en PNG, JPEG, WebP ou générez des rapports d'analyse.</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -151,7 +171,7 @@ else:
     with guide_col1:
         st.markdown("""
         #### 1. Importez
-        Utilisez la barre latérale pour importer une image depuis votre ordinateur.
+        Utilisez le bouton ci-dessous pour importer une image depuis votre ordinateur.
         
         **Formats supportés:**
         - PNG, JPG, JPEG
@@ -162,25 +182,29 @@ else:
     with guide_col2:
         st.markdown("""
         #### 2. Traitez
-        Explorez les différents onglets pour appliquer des transformations:
+        Explorez les onglets disponibles pour transformer vos images:
         
-        **Onglets disponibles:**
-        -  Prétraitement
-        -  Transformations
-        -  Analyse
+        **Onglets:**
+        - 🏠 Vue d'ensemble
+        - ✂️ Cropping intelligent
+        - 🎨 Prétraitement
+        - 🔧 Transformations
+        - 📊 Analyse avancée
+        - 💾 Export
         """)
     
     with guide_col3:
         st.markdown("""
-        #### 3. Exportez
-        Téléchargez vos images traitées dans différents formats:
+        #### 3. Explorez
+        Accédez à toutes les fonctionnalités disponibles:
         
-        **Options d'export:**
-        - PNG (qualité maximale)
-        - JPEG (compressé)
-        - WebP (moderne)
-        - Rapport d'analyse
+        **Disponible:**
+        - Historique complet (undo/redo)
+        - Galerie de projets
+        - Statistiques détaillées
+        - Rapports d'analyse
         """)
+
     
     # Dernière section avec CTA
     st.markdown("---")
